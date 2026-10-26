@@ -11,6 +11,7 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\PurchaseRate;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceRate;
+use Fleetbase\FleetOps\Support\DeliveryOptions;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -29,7 +30,14 @@ class ServiceQuoteController extends Controller
     public function preliminary(Request $request)
     {
         $context = $this->accountResolver->resolve();
+        DeliveryOptions::validateInput($request->all());
+        abort_if(($request->filled('order_config') || $request->filled('type')) && !$this->orderService->resolveOrderConfig($request), 422, 'The selected delivery workflow is invalid.');
+        $cod = PortalOrderService::codAttributes(DeliveryOptions::payloadInput($request->all()));
+        $fingerprint = $request->has('meta.delivery')
+            ? DeliveryOptions::fingerprint($request->all())
+            : null;
         $payload = $this->portalPayload($request, $context);
+        $payload = array_merge($payload, $cod);
 
         if ($this->stopCount($payload) < 2) {
             return response()->apiError('Pickup and dropoff or at least two waypoints are required.');
@@ -46,7 +54,7 @@ class ServiceQuoteController extends Controller
         ]);
 
         $quoteIds = $this->queryAllowedServiceQuotes($request);
-        $this->markQuotesForPortal($quoteIds, $context);
+        $this->markQuotesForPortal($quoteIds, $context, $fingerprint);
 
         $quotes = ServiceQuote::with(['items', 'serviceRate'])
             ->whereIn('uuid', $quoteIds)
@@ -160,14 +168,14 @@ class ServiceQuoteController extends Controller
 
     protected function portalPayload(Request $request, array $context): array
     {
-        $payload = (array) $request->input('payload', []);
+        $payload = DeliveryOptions::payloadInput($request->all());
 
         return [
-            'pickup'    => $this->placePayload($this->resolvePlace(Arr::get($payload, 'pickup', $request->input('pickup')), $context)),
-            'dropoff'   => $this->placePayload($this->resolvePlace(Arr::get($payload, 'dropoff', $request->input('dropoff')), $context)),
-            'return'    => $this->placePayload($this->resolvePlace(Arr::get($payload, 'return', $request->input('return')), $context)),
-            'waypoints' => $this->waypointPayloads(Arr::get($payload, 'waypoints', $request->input('waypoints', [])), $context),
-            'entities'  => array_values(array_filter(Arr::get($payload, 'entities', $request->input('entities', [])))),
+            'pickup'    => $this->placePayload($this->resolvePlace($payload['pickup'] ?? null, $context)),
+            'dropoff'   => $this->placePayload($this->resolvePlace($payload['dropoff'] ?? null, $context)),
+            'return'    => $this->placePayload($this->resolvePlace($payload['return'] ?? null, $context)),
+            'waypoints' => $this->waypointPayloads($payload['waypoints'] ?? [], $context),
+            'entities'  => array_values(array_filter($payload['entities'] ?? [])),
         ];
     }
 
@@ -177,25 +185,18 @@ class ServiceQuoteController extends Controller
             return null;
         }
 
-        return $this->orderService->resolveAccountPlace($place, $context);
+        return $this->orderService->resolveDeliveryPlace($place, $context);
     }
 
     protected function waypointPayloads(array $waypoints, array $context): array
     {
-        return collect($waypoints)
-            ->map(function ($waypoint) use ($context) {
-                $place = $this->resolvePlace(data_get($waypoint, 'place', $waypoint), $context);
-
-                if (!$place) {
-                    return null;
-                }
-
+        return collect($this->orderService->resolveAccountWaypoints($waypoints, $context))
+            ->map(function ($waypoint) {
                 return [
-                    ...$this->placePayload($place),
-                    'type' => data_get($waypoint, 'type', 'dropoff'),
+                    ...$this->placePayload($waypoint['place']),
+                    'type' => $waypoint['type'],
                 ];
             })
-            ->filter()
             ->values()
             ->all();
     }
@@ -239,14 +240,15 @@ class ServiceQuoteController extends Controller
             ->all();
     }
 
-    protected function markQuotesForPortal(array $quoteIds, array $context): void
+    protected function markQuotesForPortal(array $quoteIds, array $context, ?string $fingerprint = null): void
     {
-        ServiceQuote::whereIn('uuid', $quoteIds)->get()->each(function (ServiceQuote $quote) use ($context) {
+        ServiceQuote::whereIn('uuid', $quoteIds)->get()->each(function (ServiceQuote $quote) use ($context, $fingerprint) {
             $quote->updateMeta('customer_portal', [
                 'account_uuid'    => $context['account']->uuid,
                 'account_type'    => Utils::getMutationType($context['account']),
                 'created_by_uuid' => session('user'),
                 'created_at'      => now()->toISOString(),
+                'delivery_fingerprint' => $fingerprint,
             ]);
         });
     }

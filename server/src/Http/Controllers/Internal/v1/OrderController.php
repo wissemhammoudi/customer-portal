@@ -20,6 +20,8 @@ use Fleetbase\Models\TransactionItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use Fleetbase\FleetOps\Support\DeliveryOptions;
+use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
@@ -63,7 +65,18 @@ class OrderController extends Controller
 
     public function createOrder(Request $request)
     {
+        return (new Order())->getConnection()->transaction(fn () => $this->createOrderInTransaction($request));
+    }
+
+    protected function createOrderInTransaction(Request $request)
+    {
         $context = $this->accountResolver->resolve();
+        DeliveryOptions::validateInput($request->all());
+        $payloadInput = DeliveryOptions::payloadInput($request->all());
+        PortalOrderService::codAttributes($payloadInput);
+        $deliveryFingerprint = DeliveryOptions::fingerprint($request->all());
+        $originalId = $request->input('meta.delivery.original_order_uuid');
+        $originalOrder = $originalId ? $this->orderService->resolveOrder($originalId, $context) : null;
         $request->validate([
             'type'                       => 'nullable|string',
             'order_config'               => 'nullable',
@@ -91,8 +104,9 @@ class OrderController extends Controller
             'service_quote_uuid'         => 'nullable',
             'purchase_rate_uuid'         => 'nullable',
             'pod_required'               => 'nullable|boolean',
-            'pod_method'                 => 'nullable|string',
+            'pod_method'                 => [Rule::requiredIf($request->boolean('pod_required')), 'nullable', Rule::in(is_array(config('fleetops.pod_methods')) ? config('fleetops.pod_methods') : explode(',', config('fleetops.pod_methods', 'scan,signature,photo')))],
             'files'                      => 'nullable|array',
+            'files.*'                    => $request->has('meta.delivery') ? 'required|string' : 'nullable',
         ]);
 
         $enabledOrderConfigIds = $this->portalConfig->enabledOrderConfigIds();
@@ -104,16 +118,46 @@ class OrderController extends Controller
         $this->abortIfOrderConfigDisabled($orderConfig, $enabledOrderConfigIds);
         abort_if(!$orderConfig, 422, 'No order config available for this company.');
 
+        $submittedServiceQuoteId = $request->input('service_quote_uuid', $request->input('service_quote_id'));
+        $serviceQuote = $submittedServiceQuoteId ? $this->resolvePortalServiceQuote($submittedServiceQuoteId, $context) : null;
+        abort_if($submittedServiceQuoteId && !$serviceQuote, 422, 'The selected service quote is no longer available for this customer portal account.');
+
+        $purchaseRate = $request->filled('purchase_rate_uuid') ? $this->resolvePortalPurchaseRate($request->input('purchase_rate_uuid'), $context) : null;
+        abort_if($request->filled('purchase_rate_uuid') && !$purchaseRate, 422, 'The selected purchase rate is no longer available for this customer portal account.');
+        if (!$serviceQuote && $purchaseRate) {
+            $serviceQuote = $this->resolvePortalServiceQuote($purchaseRate->service_quote_uuid, $context);
+        }
+        abort_if($request->has('meta.delivery') && !$serviceQuote, 422, 'Select a current delivery quote before creating the order.');
+        abort_if($serviceQuote && $purchaseRate && $purchaseRate->service_quote_uuid !== $serviceQuote->uuid, 422, 'The purchase rate does not belong to the selected quote.');
+
+        foreach ([$serviceQuote, $purchaseRate?->serviceQuote] as $quote) {
+            if (!$quote) {
+                continue;
+            }
+            $fingerprint = data_get($quote->meta, 'customer_portal.delivery_fingerprint');
+            if ($fingerprint || $request->has('meta.delivery')) {
+                abort_if(!is_string($fingerprint) || !hash_equals($fingerprint, $deliveryFingerprint), 422, 'The delivery details changed. Get a new service quote before creating this order.');
+            }
+        }
+        $creationFingerprint = PortalOrderService::creationFingerprint($request->all());
+        if ($serviceQuote && $request->has('meta.delivery')) {
+            $existing = $this->orderService->existingOrderForQuote($serviceQuote->uuid, $creationFingerprint, $context);
+            if ($existing) {
+                $request->merge(['with_tracker_data' => true, 'with_eta' => true]);
+
+                return response()->json(['order' => $this->orderDetailsResponse($existing)]);
+            }
+        }
+
         $payloadUuid = null;
         if (is_array($request->input('payload'))) {
-            $payloadUuid = $this->orderService->buildPayloadFromInput((array) $request->input('payload'), $context)->uuid;
+            $payloadUuid = $this->orderService->buildPayloadFromInput($payloadInput, $context)->uuid;
         } elseif (is_string($request->input('payload'))) {
             $payloadUuid = Utils::getUuid('payloads', [
                 'public_id'    => $request->input('payload'),
                 'company_uuid' => session('company'),
             ]);
         } else {
-            $payloadInput = $request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
             if (array_filter($payloadInput, fn ($value) => $value !== null && $value !== '' && $value !== [])) {
                 $payloadUuid = $this->orderService->buildPayloadFromInput($payloadInput, $context)->uuid;
             }
@@ -121,24 +165,13 @@ class OrderController extends Controller
 
         abort_if(!$payloadUuid, 422, 'Pickup and dropoff or at least two waypoints are required.');
 
-        $submittedServiceQuoteId = $request->input('service_quote_uuid', $request->input('service_quote_id'));
-        $serviceQuote            = null;
-        if ($submittedServiceQuoteId) {
-            $serviceQuote = $this->resolvePortalServiceQuote($submittedServiceQuoteId, $context);
-            abort_if(!$serviceQuote, 422, 'The selected service quote is no longer available for this customer portal account.');
-        }
-
-        $purchaseRate = null;
-        if ($request->filled('purchase_rate_uuid')) {
-            $purchaseRate = $this->resolvePortalPurchaseRate($request->input('purchase_rate_uuid'), $context);
-            abort_if(!$purchaseRate, 422, 'The selected purchase rate is no longer available for this customer portal account.');
-        }
-
         $meta = (array) $request->input('meta', []);
         data_set($meta, 'customer_portal.created_by_uuid', session('user'));
         data_set($meta, 'customer_portal.created_at', now()->toISOString());
+        data_set($meta, 'customer_portal.creation_fingerprint', $creationFingerprint);
+        data_set($meta, 'customer_portal.service_quote_uuid', $serviceQuote?->uuid);
 
-        $order = Order::create([
+        $order = new Order([
             'company_uuid'       => session('company'),
             'customer_uuid'      => $context['account']->uuid,
             'customer_type'      => Utils::getMutationType($context['account']),
@@ -149,11 +182,14 @@ class OrderController extends Controller
             'scheduled_at'       => $request->input('scheduled_at'),
             'notes'              => $request->input('notes'),
             'internal_id'        => $request->input('internal_id'),
-            'service_quote_uuid' => $request->input('service_quote_uuid'),
             'pod_required'       => $request->boolean('pod_required'),
             'pod_method'         => $request->input('pod_method'),
             'meta'               => $meta,
         ]);
+        if ($originalOrder) {
+            $order->setAuthorizedOriginalReturnOrder($originalOrder);
+        }
+        $order->save();
 
         if ($purchaseRate instanceof PurchaseRate) {
             $purchaseRate->loadMissing(['serviceQuote.items', 'serviceQuote.serviceRate']);
@@ -228,6 +264,7 @@ class OrderController extends Controller
             })
             ->where('meta->customer_portal->account_uuid', $context['account']->uuid)
             ->where('meta->customer_portal->account_type', Utils::getMutationType($context['account']))
+            ->lockForUpdate()
             ->first();
     }
 
@@ -492,6 +529,7 @@ class OrderController extends Controller
             })
             ->firstOrFail();
 
+        abort_unless($file->type === 'order_file', 422, 'Generated labels, bordereaux and proof documents cannot be removed.');
         $file->delete();
         $request->merge(['with_tracker_data' => true, 'with_eta' => true]);
 
@@ -507,7 +545,7 @@ class OrderController extends Controller
 
         $request->validate([
             'files'   => 'required|array|min:1',
-            'files.*' => 'required',
+            'files.*' => 'required|string',
         ]);
 
         $order->attachFiles($request->input('files', []));

@@ -3,6 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
+import { orderDocumentAccept, validateOrderDocument } from '@fleetbase/ember-ui/utils/order-document-policy';
 import { arrayFor, identifierFor, valueFor } from '../../../../utils/model-access';
 
 const ORDER_NORMALIZE_OPTIONS = {
@@ -20,26 +21,7 @@ export default class PortalOrderDetailsDocumentsComponent extends Component {
     @tracked files = [];
     @tracked uploadQueue = [];
 
-    acceptedFileTypes = [
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'application/msword',
-        'application/pdf',
-        'application/x-pdf',
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-        'image/webp',
-        'video/mp4',
-        'video/quicktime',
-        'video/x-msvideo',
-        'video/x-flv',
-        'video/x-ms-wmv',
-        'audio/mpeg',
-        'application/zip',
-        'application/x-tar',
-    ];
+    acceptedFileTypes = orderDocumentAccept;
 
     constructor() {
         super(...arguments);
@@ -77,10 +59,6 @@ export default class PortalOrderDetailsDocumentsComponent extends Component {
     syncOrder(order) {
         const files = arrayFor(valueFor(order, 'files'));
 
-        if (!files.length) {
-            return;
-        }
-
         this.files = files;
     }
 
@@ -90,6 +68,7 @@ export default class PortalOrderDetailsDocumentsComponent extends Component {
         }
 
         try {
+            validateOrderDocument(file);
             this.uploadQueue = [...this.uploadQueue, file];
 
             const uploadedFile = yield this.fetch.uploadFile.perform(
@@ -129,6 +108,9 @@ export default class PortalOrderDetailsDocumentsComponent extends Component {
     }
 
     @task *deleteFile(file) {
+        if (valueFor(file, 'type') !== 'order_file') {
+            return this.notifications.warning('Generated delivery documents cannot be removed.');
+        }
         yield this.modalsManager.confirm({
             title: 'Delete file?',
             body: 'This removes the file from this order.',

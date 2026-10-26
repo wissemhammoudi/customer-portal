@@ -6,16 +6,33 @@ import { arrayFor, valueFor } from '../utils/model-access';
 export default class CustomerPortalOrderCreationService extends Service {
     @tracked draft;
     @tracked routePreview = [];
+    pendingReturnOrder = null;
+    draftId = 0;
 
     start(orderConfigs = []) {
+        this.draftId++;
+        const original = this.pendingReturnOrder;
+        this.pendingReturnOrder = null;
         this.draft = {
             orderConfig: orderConfigs[0],
+            meta: {
+                delivery: {
+                    purpose: original ? 'return' : 'transportation',
+                    service_level: 'standard',
+                    opening_allowed: false,
+                    ...(original ? { original_order_uuid: valueFor(original, 'uuid') ?? valueFor(original, 'id') } : {}),
+                },
+            },
+            returnAddressesConfirmed: false,
             payload: {
-                pickup: null,
-                dropoff: null,
+                pickup: original ? valueFor(original, 'payload.dropoff') : null,
+                dropoff: original ? valueFor(original, 'payload.pickup') : null,
                 return: null,
                 waypoints: [],
                 entities: [],
+                cod_amount: null,
+                cod_currency: null,
+                cod_payment_method: null,
             },
             podRequired: false,
             podMethod: null,
@@ -25,6 +42,8 @@ export default class CustomerPortalOrderCreationService extends Service {
             serviceRates: [],
             serviceQuotes: [],
             quoteRevision: 0,
+            quotedRevision: null,
+            uploadsPending: 0,
             paymentConfig: null,
             purchaseRate: null,
             files: [],
@@ -37,6 +56,7 @@ export default class CustomerPortalOrderCreationService extends Service {
     }
 
     reset() {
+        this.draftId++;
         this.draft = null;
         this.routePreview = [];
     }
@@ -54,6 +74,9 @@ export default class CustomerPortalOrderCreationService extends Service {
                 [field]: value,
             },
         };
+        if (['pickup', 'dropoff', 'waypoints'].includes(field)) {
+            this.draft = { ...this.draft, returnAddressesConfirmed: false };
+        }
         this.invalidateQuotesForField(field);
     }
 
@@ -81,6 +104,7 @@ export default class CustomerPortalOrderCreationService extends Service {
         }
 
         this.draft = { ...this.draft, isMultipleDropoffOrder, payload: nextPayload };
+        this.draft = { ...this.draft, returnAddressesConfirmed: false };
         this.invalidateServiceQuotes();
     }
 
@@ -152,7 +176,8 @@ export default class CustomerPortalOrderCreationService extends Service {
         );
     }
 
-    setServiceQuotes(serviceQuotes = []) {
+    setServiceQuotes(serviceQuotes = [], revision = this.draft?.quoteRevision) {
+        if (!this.draft || revision !== this.draft.quoteRevision) return;
         const quotes = arrayFor(serviceQuotes);
         const selected = quotes.length ? [...quotes].sort((a, b) => Number(valueFor(a, 'amount', 0)) - Number(valueFor(b, 'amount', 0)))[0] : null;
 
@@ -160,7 +185,13 @@ export default class CustomerPortalOrderCreationService extends Service {
             ...this.draft,
             serviceQuotes: quotes,
             serviceQuote: selected,
+            quotedRevision: revision,
         };
+    }
+
+    clearServiceQuotes() {
+        if (!this.draft) return;
+        this.draft = { ...this.draft, serviceQuotes: [], serviceQuote: null, purchaseRate: null, quotedRevision: null };
     }
 
     invalidateServiceQuotes() {
@@ -173,12 +204,28 @@ export default class CustomerPortalOrderCreationService extends Service {
             serviceQuotes: [],
             serviceQuote: null,
             purchaseRate: null,
+            quotedRevision: null,
             quoteRevision: (this.draft.quoteRevision ?? 0) + 1,
         };
     }
 
     invalidateQuotesForField(field) {
-        if (['orderConfig', 'scheduledAt', 'pickup', 'dropoff', 'return', 'waypoints', 'entities'].includes(field)) {
+        if (
+            [
+                'orderConfig',
+                'scheduledAt',
+                'pickup',
+                'dropoff',
+                'return',
+                'waypoints',
+                'entities',
+                'meta',
+                'returnAddressesConfirmed',
+                'cod_amount',
+                'cod_currency',
+                'cod_payment_method',
+            ].includes(field)
+        ) {
             this.invalidateServiceQuotes();
         }
     }

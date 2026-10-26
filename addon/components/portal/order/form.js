@@ -11,6 +11,7 @@ export default class PortalOrderFormComponent extends Component {
     @service customerPortalOrderActions;
     @service customerPortalOrderCreation;
     @service customerPortalOrderValidation;
+    @service deliveryOptions;
     @service customerPayment;
     @service currentUser;
     @service hostRouter;
@@ -25,7 +26,7 @@ export default class PortalOrderFormComponent extends Component {
     }
 
     get canSubmit() {
-        return this.customerPortalOrderValidation.canCreate(this.draft) && !this.isLoadingServiceQuotes;
+        return this.customerPortalOrderValidation.canCreate(this.draft) && !this.isLoadingServiceQuotes && !this.customerPortalOrderActions.createOrder.isRunning;
     }
 
     get isLoadingServiceQuotes() {
@@ -86,13 +87,26 @@ export default class PortalOrderFormComponent extends Component {
             return;
         }
         this.lastQuotedRevision = revision;
+        const draft = this.draft;
+        const draftId = this.customerPortalOrderCreation.draftId;
+        this.customerPortalOrderCreation.clearServiceQuotes();
 
         try {
-            const serviceQuotes = await this.customerPortalOrderActions.loadServiceQuotes.perform(this.draft);
-            this.customerPortalOrderCreation.setServiceQuotes(serviceQuotes);
+            const serviceQuotes = await this.customerPortalOrderActions.loadServiceQuotes.perform(draft);
+            if (this.customerPortalOrderCreation.draftId === draftId && this.draft?.quoteRevision === revision) {
+                this.customerPortalOrderCreation.setServiceQuotes(serviceQuotes, revision);
+            }
         } catch (error) {
-            this.notifications.serverError(error);
+            if (error?.name !== 'TaskCancelation' && this.customerPortalOrderCreation.draftId === draftId && this.draft?.quoteRevision === revision) {
+                this.lastQuotedRevision = null;
+                this.notifications.serverError(error);
+            }
         }
+    }
+
+    @action retryServiceQuotes() {
+        this.lastQuotedRevision = null;
+        return this.refreshServiceQuotes();
     }
 
     @action cancel() {
@@ -102,7 +116,9 @@ export default class PortalOrderFormComponent extends Component {
 
     @action async submit() {
         if (!this.canSubmit) {
-            return this.notifications.warning('Select an order type and at least two route stops before creating the order.');
+            return this.notifications.warning(
+                'Complete the route, named parcels and packaging, COD and proof settings. Select a current delivery quote and wait for document uploads to finish.'
+            );
         }
 
         if (this.isPaymentRequired && !this.draft?.purchaseRate) {

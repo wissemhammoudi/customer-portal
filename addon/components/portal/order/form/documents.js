@@ -3,6 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
+import { orderDocumentAccept, validateOrderDocument } from '@fleetbase/ember-ui/utils/order-document-policy';
 
 export default class PortalOrderFormDocumentsComponent extends Component {
     @service fetch;
@@ -11,26 +12,7 @@ export default class PortalOrderFormDocumentsComponent extends Component {
 
     @tracked uploadQueue = [];
 
-    acceptedFileTypes = [
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'application/msword',
-        'application/pdf',
-        'application/x-pdf',
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-        'image/webp',
-        'video/mp4',
-        'video/quicktime',
-        'video/x-msvideo',
-        'video/x-flv',
-        'video/x-ms-wmv',
-        'audio/mpeg',
-        'application/zip',
-        'application/x-tar',
-    ];
+    acceptedFileTypes = orderDocumentAccept;
 
     get files() {
         return this.args.draft?.files ?? [];
@@ -41,7 +23,11 @@ export default class PortalOrderFormDocumentsComponent extends Component {
             return;
         }
 
+        const creation = this.customerPortalOrderCreation;
+        const draftId = creation.draftId;
+        creation.setField('uploadsPending', (creation.draft.uploadsPending ?? 0) + 1);
         try {
+            validateOrderDocument(file);
             this.uploadQueue = [...this.uploadQueue, file];
 
             yield this.fetch.uploadFile.perform(
@@ -51,7 +37,8 @@ export default class PortalOrderFormDocumentsComponent extends Component {
                     type: 'order_file',
                 },
                 (uploadedFile) => {
-                    this.customerPortalOrderCreation.setField('files', [...this.files, uploadedFile]);
+                    if (creation.draftId !== draftId) return;
+                    this.customerPortalOrderCreation.setField('files', [...(creation.draft.files ?? []), uploadedFile]);
                     this.uploadQueue = this.uploadQueue.filter((queuedFile) => queuedFile !== file);
                 },
                 () => {
@@ -64,17 +51,19 @@ export default class PortalOrderFormDocumentsComponent extends Component {
         } catch (error) {
             debug(`Customer portal order document upload failed: ${error.message}`);
             this.notifications.serverError(error);
+        } finally {
+            this.uploadQueue = this.uploadQueue.filter((queuedFile) => queuedFile !== file);
+            if (creation.draftId === draftId && creation.draft) {
+                creation.setField('uploadsPending', Math.max(0, (creation.draft.uploadsPending ?? 1) - 1));
+            }
         }
     }
 
     @task *removeFile(file) {
-        this.customerPortalOrderCreation.setField(
+        yield this.customerPortalOrderCreation.setField(
             'files',
             this.files.filter((candidate) => candidate !== file)
         );
 
-        if (typeof file?.destroyRecord === 'function') {
-            yield file.destroyRecord();
-        }
     }
 }

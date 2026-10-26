@@ -8,7 +8,7 @@
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <InputGroup @name="Name">
-                        <Input @value={{entity.name}} class="form-input w-full" placeholder="Package, pallet, envelope" />
+                        <input aria-label="Parcel name" value={{entity.name}} class="form-input w-full" placeholder="Package, pallet, envelope" {{on "input" (fn this.setEntityInput index "name")}} />
                     </InputGroup>
                     <InputGroup @name="Item Type">
                         <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
@@ -29,19 +29,22 @@
                         </div>
                     </InputGroup>
                     <InputGroup @name="Description" @wrapperClass="col-span-2">
-                        <Textarea @value={{entity.description}} class="form-input w-full" rows={{2}} placeholder="Optional handling notes or item description" />
+                        <textarea value={{entity.description}} class="form-input w-full" rows={{2}} placeholder="Optional handling notes or item description" {{on "input" (fn this.setEntityInput index "description")}}></textarea>
                     </InputGroup>
+                    <div class="col-span-2">
+                        <ParcelPackaging @meta={{entity.meta}} @onChange={{fn this.setEntityValue index "meta"}} />
+                    </div>
                     <InputGroup @name="Weight" @wrapperClass="col-span-2">
                         <div class="grid grid-cols-3 gap-2">
-                            <Input @value={{entity.weight}} @type="number" class="form-input w-full col-span-2" placeholder="0.00" />
+                            <input aria-label="Parcel weight" value={{entity.weight}} type="number" min="0" class="form-input w-full col-span-2" placeholder="0.00" {{on "input" (fn this.setEntityInput index "weight")}} />
                             <Select class="w-full" @options={{this.weightUnits}} @value={{entity.weight_unit}} @onSelect={{fn this.setEntityValue index "weight_unit"}} />
                         </div>
                     </InputGroup>
                     <InputGroup @name="Dimensions" @wrapperClass="col-span-2">
                         <div class="grid grid-cols-4 gap-2">
-                            <Input @value={{entity.length}} @type="number" class="form-input w-full" placeholder="Length" />
-                            <Input @value={{entity.width}} @type="number" class="form-input w-full" placeholder="Width" />
-                            <Input @value={{entity.height}} @type="number" class="form-input w-full" placeholder="Height" />
+                            <input aria-label="Parcel length" value={{entity.length}} type="number" min="0" class="form-input w-full" placeholder="Length" {{on "input" (fn this.setEntityInput index "length")}} />
+                            <input aria-label="Parcel width" value={{entity.width}} type="number" min="0" class="form-input w-full" placeholder="Width" {{on "input" (fn this.setEntityInput index "width")}} />
+                            <input aria-label="Parcel height" value={{entity.height}} type="number" min="0" class="form-input w-full" placeholder="Height" {{on "input" (fn this.setEntityInput index "height")}} />
                             <Select class="w-full" @options={{this.dimensionUnits}} @value={{entity.dimensions_unit}} @onSelect={{fn this.setEntityValue index "dimensions_unit"}} />
                         </div>
                     </InputGroup>
@@ -50,7 +53,7 @@
         {{else}}
             <div class="portal-empty-state compact">
                 <div class="portal-empty-state-title">No items added</div>
-                <p>Add items when the carrier needs package details, dimensions, or references.</p>
+                <p>Add at least one named parcel, then choose its contents category and compliant packaging.</p>
             </div>
         {{/each}}
     </div>

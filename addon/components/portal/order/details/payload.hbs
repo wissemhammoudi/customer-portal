@@ -13,6 +13,12 @@
                         {{/if}}
                     </div>
                     <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+                        {{#if entity.meta.parcel}}
+                            <div class="field-info-container">
+                                <div class="field-name">Category / Packaging</div>
+                                <div class="field-value">{{smart-humanize entity.meta.parcel.category}} / {{smart-humanize entity.meta.parcel.packaging_type}}</div>
+                            </div>
+                        {{/if}}
                         <div class="field-info-container">
                             <div class="field-name">Weight</div>
                             <div class="field-value">{{if entity.weight (concat entity.weight " " entity.weight_unit) "-"}}</div>

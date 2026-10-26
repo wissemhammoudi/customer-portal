@@ -78,6 +78,10 @@ export default class PortalOrderFormRouteComponent extends Component {
         this.updateRoutePreview();
     }
 
+    @action confirmReturnAddresses(event) {
+        this.customerPortalOrderCreation.setField('returnAddressesConfirmed', event.target.checked);
+    }
+
     @action toggleMultiDrop(isMultipleDropoffOrder) {
         this.customerPortalOrderCreation.toggleMultiDrop(isMultipleDropoffOrder);
         this.updateRoutePreview();

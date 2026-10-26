@@ -4,6 +4,9 @@
             <div class="portal-order-card-title">
                 <div class="font-semibold truncate">{{this.trackingNumber}}</div>
                 <div class="portal-order-card-subtitle">{{n-a (smart-humanize @order.type)}}</div>
+                {{#if @order.meta.delivery}}
+                    <div class="portal-order-card-subtitle">{{smart-humanize @order.meta.delivery.purpose}} / {{smart-humanize @order.meta.delivery.service_level}}</div>
+                {{/if}}
             </div>
             <Badge @status={{@order.status}} />
         </div>

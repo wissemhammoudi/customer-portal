@@ -80,6 +80,30 @@ customer-portal/int/v1
 
 Backend controllers and services scope data to the authenticated customer account, integrate with FleetOps orders and issues, integrate with Ledger invoices and transactions, and expose portal configuration for Console admins.
 
+### Delivery creation contract
+
+For requests containing `meta.delivery`, both preliminary quotes and order creation validate the same delivery inputs:
+
+- Supply pickup and dropoff together, or at least two waypoints, and at least one named parcel with a current, compatible packaging classification. Invalid or unavailable route stops are rejected rather than removed.
+- Route, parcel, and COD fields can be supplied inside `payload` or at the top level. Conflicting duplicate values are rejected. An explicitly invalid workflow never falls back to another workflow.
+- Supply a current, account-scoped `service_quote_uuid` (or a purchase rate belonging to that quote). Changes to delivery details require a fresh quote. New Express selections remain unavailable until pricing is configured.
+- COD uses `cod_amount` in major currency units, an uppercase ISO `cod_currency`, and `cod_payment_method: "cash"`. Send amounts as decimal strings, not floating-point calculations. For example, `"125.5"` TND is persisted as `125500` millimes. Excess currency precision and amounts beyond the signed SQL INT column limit are rejected, never rounded.
+- Document attachments use uploaded file UUID strings in `files`. Uploading a file and attaching it to an order remain separate operations.
+
+Order creation runs inside a database transaction, including payload, parcels, purchase rate, core transaction, and attachment association writes on the configured connection. Quote and existing-order locks serialize quote consumption. An identical retry using the same available quote returns the existing order without repeating those writes. Changed notes/documents conflict with HTTP 409; changed quoted delivery details require a new quote. A deleted order cannot free its quote for reuse. Expired quotes are rejected, including retries after expiry.
+
+The quote reference and retry fingerprint are persisted in `meta.customer_portal`; there is no `orders.service_quote_uuid` column. Existing purchase-rate links also identify previously consumed quotes. Legacy requests without `meta.delivery` retain optional parcel/quote behavior. Saved phone numbers remain optional; this change does not introduce a mandatory-phone policy.
+
+Regression coverage is in the host API's `tests/Unit/PortalDeliveryCreationTest.php`, including real SQLite payload/order/core-financial persistence, flat/nested requests, replay, account/expiry checks, money boundaries, and late-failure rollback. Tracking/webhook side effects and the separate Ledger invoice integration are isolated in these tests. Verify MySQL concurrency, Ledger/payment integration, and device workflows in staging before coordinated rollout.
+
+### Creation interface safeguards
+
+The portal offers optional cash collection in TND, separate from delivery charges. The amount, currency, and cash method are serialized identically for quotes and creation. Returns do not inherit COD. Parcel names, numeric fields, packaging, route stops, schedule, and proof settings must be valid before rates can be requested.
+
+Creation requires a selected quote from the current draft revision. Every route, parcel, delivery-option, schedule, and COD edit invalidates previous rates; late responses cannot restore them. **Refresh delivery rates** supports retry after a rate lookup failure. Pending document uploads block creation, including multiple concurrent uploads; failed uploads notify the customer and clear their pending state so files can be selected again. Successfully uploaded file UUIDs are sent only with creation, not quoting.
+
+The host Console's `tests/unit/services/delivery-creation-parity-test.js` exercises portal and Console services/components together, including upload gating, stale responses, COD boundaries, and draft serialization. Deploy with the backend contract above; this work does not transfer a mobile draft into paid portal checkout or change optional phone-number policy.
+
 ## Installation
 
 Install the backend package in the Fleetbase API:

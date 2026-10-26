@@ -133,24 +133,13 @@
                     </PowerSelect>
                 </div>
             </InputGroup>
-            <InputGroup @name="Return">
-                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                    <PowerSelect
-                        @options={{this.places}}
-                        @search={{perform this.searchPlaces}}
-                        @searchEnabled={{true}}
-                        @selected={{@draft.payload.return}}
-                        @onChange={{fn this.setPayloadPlace "return"}}
-                        @placeholder="Select return place"
-                        @allowClear={{true}}
-                        @triggerClass="form-select form-input"
-                        @renderInPlace={{true}}
-                        as |place|
-                    >
-                        {{place-address place}}
-                    </PowerSelect>
-                </div>
-            </InputGroup>
         </div>
+    {{/if}}
+    {{#if (and (eq @draft.meta.delivery.purpose "return") @draft.meta.delivery.original_order_uuid)}}
+        <p>Returning an existing order. Collection and destination are reversed; cash collection and original parcel contents are not copied.</p>
+        <label class="flex items-center gap-2">
+            <input type="checkbox" checked={{@draft.returnAddressesConfirmed}} {{on "change" this.confirmReturnAddresses}} />
+            <span>I confirm the return collection and destination</span>
+        </label>
     {{/if}}
 </ContentPanel>

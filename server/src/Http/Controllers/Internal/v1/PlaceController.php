@@ -145,6 +145,9 @@ class PlaceController extends Controller
         }
 
         $place->fill(array_filter($input, fn ($value) => $value !== null && $value !== ''));
+        if ($request->has('phone')) {
+            $place->phone = $request->input('phone');
+        }
         $place->save();
 
         return response()->json([

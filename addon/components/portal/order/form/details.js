@@ -9,6 +9,21 @@ export default class PortalOrderFormDetailsComponent extends Component {
 
     podOptions = ['scan', 'signature', 'photo'];
 
+    get collectCash() {
+        return this.customerPortalOrderCreation.draft?.payload?.cod_payment_method === 'cash';
+    }
+
+    @action toggleCollectCash() {
+        const enabled = !this.collectCash;
+        this.customerPortalOrderCreation.setPayloadField('cod_amount', enabled ? '' : null);
+        this.customerPortalOrderCreation.setPayloadField('cod_currency', enabled ? 'TND' : null);
+        this.customerPortalOrderCreation.setPayloadField('cod_payment_method', enabled ? 'cash' : null);
+    }
+
+    @action setCodAmount(event) {
+        this.customerPortalOrderCreation.setPayloadField('cod_amount', event.target.value);
+    }
+
     @action async setOrderConfig(orderConfig) {
         this.customerPortalOrderCreation.setField('orderConfig', orderConfig);
         this.customerPortalOrderCreation.setField('customFields', null);
@@ -30,7 +45,9 @@ export default class PortalOrderFormDetailsComponent extends Component {
     }
 
     @action togglePodRequired() {
-        this.customerPortalOrderCreation.setField('podRequired', !this.customerPortalOrderCreation.draft?.podRequired);
+        const required = !this.customerPortalOrderCreation.draft?.podRequired;
+        this.customerPortalOrderCreation.setField('podRequired', required);
+        this.customerPortalOrderCreation.setField('podMethod', required ? 'signature' : null);
     }
 
     @action setPodMethod(podMethod) {

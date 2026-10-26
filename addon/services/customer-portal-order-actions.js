@@ -118,9 +118,13 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
             type: draft.orderConfig?.key,
             scheduled_at: draft.scheduledAt,
             notes: draft.notes,
+            meta: draft.meta,
             pickup: this.serializePlace(draft.payload?.pickup),
             dropoff: this.serializePlace(draft.payload?.dropoff),
             return: this.serializePlace(draft.payload?.return),
+            cod_amount: draft.payload?.cod_amount,
+            cod_currency: draft.payload?.cod_currency,
+            cod_payment_method: draft.payload?.cod_payment_method,
             waypoints: (draft.payload?.waypoints ?? [])
                 .map((waypoint) => {
                     const place = this.serializePlace(waypoint.place ?? waypoint);
@@ -138,10 +142,15 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
 
     serializeQuoteRequest(draft = {}) {
         return {
+            meta: draft.meta,
+            order_config: draft.orderConfig?.id ?? draft.orderConfig?.public_id ?? draft.orderConfig?.uuid,
             payload: {
                 pickup: this.serializePlace(draft.payload?.pickup),
                 dropoff: this.serializePlace(draft.payload?.dropoff),
                 return: this.serializePlace(draft.payload?.return),
+                cod_amount: draft.payload?.cod_amount,
+                cod_currency: draft.payload?.cod_currency,
+                cod_payment_method: draft.payload?.cod_payment_method,
                 waypoints: (draft.payload?.waypoints ?? [])
                     .map((waypoint) => {
                         const place = this.serializePlace(waypoint.place ?? waypoint);
@@ -154,6 +163,8 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
             service_type: draft.orderConfig?.key,
             scheduled_at: draft.scheduledAt,
             is_route_optimized: true,
+            pod_required: draft.podRequired,
+            pod_method: draft.podMethod,
         };
     }
 
