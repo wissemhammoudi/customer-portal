@@ -2,7 +2,15 @@
     <div class="grid grid-cols-1 gap-3">
         <InputGroup @name="Delivery workflow" @required={{true}}>
             <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                <PowerSelect @options={{@orderConfigs}} @selected={{@draft.orderConfig}} @onChange={{this.setOrderConfig}} @placeholder="Select order type" @triggerClass="form-select form-input" @renderInPlace={{true}} as |orderConfig|>
+                <PowerSelect
+                    @options={{@orderConfigs}}
+                    @selected={{@draft.orderConfig}}
+                    @onChange={{this.setOrderConfig}}
+                    @placeholder="Select order type"
+                    @triggerClass="form-select form-input"
+                    @renderInPlace={{true}}
+                    as |orderConfig|
+                >
                     <div class="text-sm">
                         <div class="font-semibold normalize-in-trigger">{{orderConfig.name}}</div>
                         <div class="hide-from-trigger">{{n-a orderConfig.description}}</div>
@@ -10,8 +18,20 @@
                 </PowerSelect>
             </div>
         </InputGroup>
-        <InputGroup @name="Scheduled At">
+        <InputGroup @name="Service">
+            <Select @options={{this.serviceLevels}} @value={{@draft.meta.delivery.service_level}} @onSelect={{this.setServiceLevel}} />
+            {{#if (eq @draft.meta.delivery.service_level "express")}}
+                <InfoBlock @text="Express pricing is not configured yet. Choose Standard to request a quote." />
+            {{/if}}
+        </InputGroup>
+        <InputGroup @name="Scheduled At (optional)" @helpText="Leave blank for an unscheduled delivery. Select a future date and time.">
             <input value={{@draft.scheduledAt}} type="datetime-local" class="form-input w-full" {{on "input" (fn this.setInput "scheduledAt")}} />
+        </InputGroup>
+        {{#if this.invalidSchedule}}
+            <InfoBlock @text="Choose a valid future date and time, or clear the schedule." />
+        {{/if}}
+        <InputGroup>
+            <Toggle @label="Allow opening at delivery" @isToggled={{@draft.meta.delivery.opening_allowed}} @onToggle={{this.toggleOpening}} />
         </InputGroup>
         <InputGroup>
             <Toggle @label="Require proof of delivery" @isToggled={{@draft.podRequired}} @onToggle={{this.togglePodRequired}} />

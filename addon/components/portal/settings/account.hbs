@@ -1,4 +1,15 @@
 <div class="portal-account-settings-stack">
+    <div class="portal-account-card">
+        <h3>Account pickup address</h3>
+        <p>One pickup address shared by all members of your seller account on app and web. Street address, coordinates and contact phone are required.</p>
+        {{#if this.pickupAddress}}
+            <div>{{place-address this.pickupAddress}}</div>
+            <div>{{this.pickupAddress.phone}}</div>
+        {{else}}
+            <p>No pickup address saved. New deliveries cannot be quoted or created.</p>
+        {{/if}}
+        <Button @text="Edit account pickup" @onClick={{this.editPickup}} @disabled={{this.loadPickup.isRunning}} />
+    </div>
     <form class="portal-account-card flex flex-col md:flex-row" aria-label="Profile settings" {{on "submit" (perform this.saveProfile)}}>
         <div class="w-32 flex flex-col justify-center mb-6 mr-6">
             <Image src={{this.user.avatar_url}} @fallbackSrc={{config "defaultValues.userImage"}} alt={{this.user.name}} class="w-32 h-32 rounded-md" />

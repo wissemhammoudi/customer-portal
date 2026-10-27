@@ -30,6 +30,7 @@ class ServiceQuoteController extends Controller
     public function preliminary(Request $request)
     {
         $context = $this->accountResolver->resolve();
+        $this->orderService->validateNewOrder($request, $context);
         DeliveryOptions::validateInput($request->all());
         abort_if(($request->filled('order_config') || $request->filled('type')) && !$this->orderService->resolveOrderConfig($request), 422, 'The selected delivery workflow is invalid.');
         $cod = PortalOrderService::codAttributes(DeliveryOptions::payloadInput($request->all()));

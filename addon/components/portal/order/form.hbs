@@ -2,12 +2,27 @@
     <Overlay @position="right" @noBackdrop={{true}} @fullHeight={{true}} @width="500px" @isOpen={{true}} @overlayClass="portal-order-panel-overlay" as |overlay|>
         <Overlay::Header @overlay={{overlay}} @title="New Order" @onPressCancel={{this.cancel}}>
             <:actions>
-                <Button @icon="check" @type="primary" @text="Create" @onClick={{this.submit}} @isLoading={{this.customerPortalOrderActions.createOrder.isRunning}} @disabled={{not this.canSubmit}} />
+                <Button
+                    @icon="check"
+                    @type="primary"
+                    @text="Create"
+                    @onClick={{this.submit}}
+                    @isLoading={{this.customerPortalOrderActions.createOrder.isRunning}}
+                    @disabled={{not this.canSubmit}}
+                />
             </:actions>
         </Overlay::Header>
         <Overlay::Body @wrapperClass="portal-order-overlay-body">
+            {{#if this.draft.blockedReason}}
+                <InfoBlock @text={{this.draft.blockedReason}} />
+            {{/if}}
+            {{#if this.draft.pickupChanged}}
+                <InfoBlock
+                    @text="Your account pickup address changed since this draft was saved. Confirm using the current Profile/Settings pickup address; previous rates will be discarded."
+                />
+                <Button @text="Use current account pickup" @onClick={{this.customerPortalOrderCreation.acknowledgePickupChange}} />
+            {{/if}}
             <Portal::Order::Form::Details @draft={{this.draft}} @orderConfigs={{@model.orderConfigs}} />
-            <DeliveryOrderOptions @meta={{this.draft.meta}} @onChange={{fn this.customerPortalOrderCreation.setField "meta"}} />
             <Portal::Order::Form::CustomFields @draft={{this.draft}} />
             <Portal::Order::Form::Route @draft={{this.draft}} @places={{@model.places}} />
             <Portal::Order::Form::Payload @draft={{this.draft}} />
@@ -17,8 +32,10 @@
             <Portal::Order::Form::Notes @draft={{this.draft}} />
             {{#if this.draft.uploadsPending}}
                 <InfoBlock @text="Documents are uploading. Please wait before creating the delivery." />
-            {{else unless this.canSubmit}}
-                <InfoBlock @text="Complete the route, named parcels and packaging, COD and proof settings, then select a current delivery rate." />
+            {{else}}
+                {{#unless this.canSubmit}}
+                    <InfoBlock @text="Complete the route, named parcels and packaging, COD and proof settings, then select a current delivery rate." />
+                {{/unless}}
             {{/if}}
             <Spacer @height="200px" />
         </Overlay::Body>

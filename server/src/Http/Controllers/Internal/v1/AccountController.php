@@ -3,6 +3,8 @@
 namespace Fleetbase\CustomerPortal\Http\Controllers\Internal\v1;
 
 use Fleetbase\CustomerPortal\Services\PortalAccountResolver;
+use Fleetbase\CustomerPortal\Services\PortalPickupAddressService;
+use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Contact as ContactResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Vendor as VendorResource;
 use Fleetbase\Http\Controllers\Controller;
@@ -24,6 +26,20 @@ class AccountController extends Controller
             'account'  => $this->resourceForAccount($context['account'], $context['account_type']),
             'accounts' => $context['accounts'],
         ]);
+    }
+
+    public function pickupAddress()
+    {
+        $place = (new PortalPickupAddressService())->get($this->accountResolver->resolve());
+
+        return response()->json(['place' => $place ? (new PlaceResource($place))->resolve() : null]);
+    }
+
+    public function updatePickupAddress(Request $request)
+    {
+        $place = (new PortalPickupAddressService())->put($request->all(), $this->accountResolver->resolve());
+
+        return response()->json(['place' => (new PlaceResource($place))->resolve()]);
     }
 
     public function changePassword(Request $request)

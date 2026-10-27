@@ -44,6 +44,49 @@ production activation or Express release.
 
 ## Features
 
+### Customer delivery policy and shared pickup API
+
+New customer deliveries are transportation only, with one account pickup and one
+dropoff. Returns, return-to-pickup and intermediate/multiple stops remain readable
+on historical orders but cannot be submitted as new deliveries. Unsupported saved
+checkout drafts remain intact and show an explicit blocking explanation. A draft
+whose pickup differs from the current account pickup requires acknowledgement
+before replacing it and discarding old rates.
+
+The schedule date/time field is always visible, optional until chosen, and must
+be a valid future timestamp when provided. Standard and Express are the only
+customer service choices. **Express remains blocked by the shared FleetOps
+pricing safety gate until Express pricing is configured**; the portal does not
+silently price it as Standard or change dispatcher/admin behavior.
+
+Both app and web use the authenticated `customer-portal/int/v1` namespace:
+
+- `GET account/pickup-address` returns `{"place": Place|null}`.
+- `PUT account/pickup-address` accepts an **unwrapped** Place address object
+  (`street1` or `address`, `phone`, `latitude`, `longitude`, optional `name`,
+  `street2`, `city`, `province`, `postal_code`, `country`, `neighborhood`,
+  `district`, `building`, `security_access_code`). GeoJSON
+  `location: {"type":"Point","coordinates":[longitude,latitude]}` may replace
+  latitude/longitude. Returns `{"place": Place}`; validation failures are HTTP 422.
+- Street, nonblank phone and coordinates in latitude [-90,90], longitude
+  [-180,180] are required. Owner/company/UUID/meta fields supplied by clients
+  cannot change ownership or select another account's record.
+- The pointer is stored in the account's
+  `meta.customer_portal.pickup_address_uuid`, referencing an existing
+  account/company-owned Place; concurrent writes lock the account. PUT updates
+  that record or reuses a matching owned record. GET returns null for a missing,
+  deleted or foreign pointer. `DELETE places/{id}` clears the pointer when
+  deleting the current pickup. Conversion to a company preserves it.
+
+Only Profile/Settings edits the pickup; new-order UI shows it read-only. Scoped
+quote/create APIs require this current pickup (street, coordinates and phone),
+reject stale/overridden pickup details and require a dropoff phone. New dropoff
+map/search selections require confirmation with phone and save through
+`POST places` (or `PATCH places/{id}` for an existing owned entry) **before**
+selection. Matching account-owned street/phone/city/country entries are reused.
+Saving a dropoff never changes the account pickup pointer; editing the pickup
+through generic address-book PATCH is rejected with instructions to use Settings.
+
 - **Customer authentication** - Customer login, two-factor verification, password recovery, customer session loading, and automatic redirects from customer access URLs.
 - **Dashboard workspace** - Customer dashboard registration with widgets for active orders, completed orders, unpaid invoices, open support tickets, recent orders, and pending actions.
 - **Order management** - Order listing, order details, order creation, route preview, place lookup, payload/entities, custom fields, notes, documents, cancel, reschedule, and file attachments.

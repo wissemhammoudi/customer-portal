@@ -2,17 +2,21 @@ import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { arrayFor, valueFor } from '../utils/model-access';
+import { samePickup, unsupportedOrder } from '../utils/customer-order-policy';
 
 export default class CustomerPortalOrderCreationService extends Service {
     @tracked draft;
     @tracked routePreview = [];
     pendingReturnOrder = null;
+    accountPickup = null;
     draftId = 0;
 
     rememberCheckoutRedirect(params) {
-        const query = Object.fromEntries(['checkout_draft', 'checkout_session_id', 'service_quote', 'creating']
-            .filter((key) => typeof params[key] === 'string' && params[key].length <= 512)
-            .map((key) => [key, params[key]]));
+        const query = Object.fromEntries(
+            ['checkout_draft', 'checkout_session_id', 'service_quote', 'creating']
+                .filter((key) => typeof params[key] === 'string' && params[key].length <= 512)
+                .map((key) => [key, params[key]])
+        );
         if (query.checkout_draft) window.sessionStorage.setItem('customer-portal:checkout-redirect', JSON.stringify(query));
     }
 
@@ -30,22 +34,20 @@ export default class CustomerPortalOrderCreationService extends Service {
 
     start(orderConfigs = []) {
         this.draftId++;
-        const original = this.pendingReturnOrder;
         this.pendingReturnOrder = null;
         this.draft = {
             orderConfig: orderConfigs[0],
             meta: {
                 delivery: {
-                    purpose: original ? 'return' : 'transportation',
+                    purpose: 'transportation',
                     service_level: 'standard',
                     opening_allowed: false,
-                    ...(original ? { original_order_uuid: valueFor(original, 'uuid') ?? valueFor(original, 'id') } : {}),
                 },
             },
             returnAddressesConfirmed: false,
             payload: {
-                pickup: original ? valueFor(original, 'payload.dropoff') : null,
-                dropoff: original ? valueFor(original, 'payload.pickup') : null,
+                pickup: this.accountPickup,
+                dropoff: null,
                 return: null,
                 waypoints: [],
                 entities: [],
@@ -82,29 +84,54 @@ export default class CustomerPortalOrderCreationService extends Service {
 
     restoreCheckoutDraft(saved, orderConfigs, restoreQuote = false) {
         const input = saved.input;
-        const orderConfig = orderConfigs.find((item) =>
-            [valueFor(item, 'uuid'), valueFor(item, 'id'), valueFor(item, 'public_id')].includes(input.order_config));
+        const orderConfig = orderConfigs.find((item) => [valueFor(item, 'uuid'), valueFor(item, 'id'), valueFor(item, 'public_id')].includes(input.order_config));
         if (!orderConfig) throw new Error('The saved delivery workflow is no longer available.');
         this.start(orderConfigs);
         const intermediate = input.waypoints ?? [];
-        const waypoints = intermediate.length && input.pickup && input.dropoff
-            ? [{ ...input.pickup, type: 'pickup' }, ...intermediate, { ...input.dropoff, type: 'dropoff' }]
-            : intermediate;
+        const waypoints = intermediate.length && input.pickup && input.dropoff ? [{ ...input.pickup, type: 'pickup' }, ...intermediate, { ...input.dropoff, type: 'dropoff' }] : intermediate;
         const serviceQuote = restoreQuote && input.service_quote_uuid ? { uuid: input.service_quote_uuid } : null;
         this.draft = {
-            ...this.draft, orderConfig, checkoutDraftUuid: saved.uuid, meta: input.meta,
-            notes: input.notes, internalId: input.internal_id, scheduledAt: input.scheduled_at,
-            podRequired: input.pod_required, podMethod: input.pod_method,
+            ...this.draft,
+            orderConfig,
+            checkoutDraftUuid: saved.uuid,
+            meta: input.meta,
+            notes: input.notes,
+            internalId: input.internal_id,
+            scheduledAt: input.scheduled_at,
+            podRequired: input.pod_required,
+            podMethod: input.pod_method,
             returnAddressesConfirmed: input.return_addresses_confirmed === true,
             isMultipleDropoffOrder: waypoints.length > 0,
-            payload: { pickup: input.pickup, dropoff: input.dropoff, return: input.return,
+            payload: {
+                pickup: input.pickup,
+                dropoff: input.dropoff,
+                return: input.return,
                 waypoints: waypoints.map((stop) => ({ place: stop.place ?? stop, type: stop.type ?? 'dropoff' })),
-                entities: input.entities ?? [], cod_amount: input.cod_amount,
-                cod_currency: input.cod_currency, cod_payment_method: input.cod_payment_method },
+                entities: input.entities ?? [],
+                cod_amount: input.cod_amount,
+                cod_currency: input.cod_currency,
+                cod_payment_method: input.cod_payment_method,
+            },
             files: (input.files ?? []).map((uuid) => ({ uuid, original_filename: 'Saved checkout document' })),
-            serviceQuote, serviceQuotes: serviceQuote ? [serviceQuote] : [], quotedRevision: serviceQuote ? 0 : null,
+            serviceQuote,
+            serviceQuotes: serviceQuote ? [serviceQuote] : [],
+            quotedRevision: serviceQuote ? 0 : null,
         };
+        if (unsupportedOrder(input)) {
+            this.draft = {
+                ...this.draft,
+                blockedReason:
+                    'This saved draft contains a return, unsupported service, or intermediate stops. It cannot be submitted. Start a new transportation order; the saved draft has not been changed.',
+            };
+        } else if (!samePickup(input.pickup, this.accountPickup)) {
+            this.draft = { ...this.draft, pickupChanged: true, serviceQuote: null, serviceQuotes: [], quotedRevision: null };
+        }
         return this.draft;
+    }
+
+    @action acknowledgePickupChange() {
+        this.draft = { ...this.draft, pickupChanged: false };
+        this.setPayloadField('pickup', this.accountPickup);
     }
 
     @action setField(field, value) {

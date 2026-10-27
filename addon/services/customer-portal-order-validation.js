@@ -1,5 +1,6 @@
 import Service, { inject as service } from '@ember/service';
 import { valueFor } from '../utils/model-access';
+import { hasPhone, unsupportedOrder, validPickup } from '../utils/customer-order-policy';
 
 export default class CustomerPortalOrderValidationService extends Service {
     @service deliveryOptions;
@@ -14,6 +15,9 @@ export default class CustomerPortalOrderValidationService extends Service {
         if (!draft?.orderConfig) {
             return false;
         }
+        if (draft.blockedReason || draft.pickupChanged || unsupportedOrder(draft) || !validPickup(draft.payload?.pickup) || !hasPhone(draft.payload?.dropoff)) {
+            return false;
+        }
 
         const required = Boolean(draft.meta?.delivery);
         if (draft.meta?.delivery?.service_level === 'express') {
@@ -26,7 +30,7 @@ export default class CustomerPortalOrderValidationService extends Service {
         if ((required && (!this.deliveryOptions.catalogue || !entities.length)) || !entities.every((entity) => this.deliveryOptions.isValidEntity(entity, required))) {
             return false;
         }
-        if (draft.scheduledAt && !Number.isFinite(Date.parse(draft.scheduledAt))) return false;
+        if (draft.scheduledAt && (!Number.isFinite(Date.parse(draft.scheduledAt)) || Date.parse(draft.scheduledAt) <= Date.now())) return false;
         if (draft.podRequired && !['scan', 'signature', 'photo'].includes(draft.podMethod)) return false;
         const payload = draft.payload ?? {};
         if (

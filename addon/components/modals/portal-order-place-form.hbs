@@ -7,14 +7,7 @@
 
             <InputGroup @name="Street 1" @value={{this.place.street1}} @wrapperClass="col-span-3">
                 <div class="portal-place-lookup">
-                    <Input
-                        @value={{this.place.street1}}
-                        @type="text"
-                        class="w-full form-input"
-                        placeholder="Street 1"
-                        autocomplete="off"
-                        {{on "input" this.searchStreet}}
-                    />
+                    <Input @value={{this.place.street1}} @type="text" class="w-full form-input" placeholder="Street 1" autocomplete="off" {{on "input" this.searchStreet}} />
 
                     {{#if this.lookupPlaces.isRunning}}
                         <div class="portal-place-lookup-menu">
@@ -49,7 +42,7 @@
                 <ModelCoordinatesInput @model={{this.place}} @autocomplete="all" @onInputReady={{fn (mut this.coordinatesInput)}} />
             </InputGroup>
 
-            <InputGroup @name="Phone" @wrapperClass="col-span-2">
+            <InputGroup @name="Phone" @required={{true}} @helpText="Required for pickup and dropoff." @wrapperClass="col-span-2">
                 <PhoneInput @value={{this.place.phone}} @autocomplete="nope" @onInput={{fn (mut this.place.phone)}} class="form-input w-full" />
             </InputGroup>
         </div>

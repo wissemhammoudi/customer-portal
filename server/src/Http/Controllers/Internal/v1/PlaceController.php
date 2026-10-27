@@ -3,6 +3,9 @@
 namespace Fleetbase\CustomerPortal\Http\Controllers\Internal\v1;
 
 use Fleetbase\CustomerPortal\Services\PortalAccountResolver;
+use Fleetbase\CustomerPortal\Services\PortalPickupAddressService;
+use Illuminate\Support\Arr;
+use Geocoder\Laravel\Facades\Geocoder;
 use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Support\PlaceSearch;
@@ -55,13 +58,14 @@ class PlaceController extends Controller
 
     public function create(Request $request)
     {
+        $this->normalizeCoordinates($request);
         $request->validate([
             'name'      => ['nullable', 'string'],
             'street1'   => ['nullable', 'string'],
             'address'   => ['nullable', 'string'],
             'phone'     => ['nullable', 'string'],
-            'latitude'  => ['nullable', 'required_with:longitude'],
-            'longitude' => ['nullable', 'required_with:latitude'],
+            'latitude'  => ['nullable', 'required_with:longitude', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'required_with:latitude', 'numeric', 'between:-180,180'],
         ]);
 
         $context = $this->accountResolver->resolve();
@@ -95,14 +99,31 @@ class PlaceController extends Controller
             $input['location'] = new Point(0, 0);
         }
 
-        $place = Place::firstOrNew([
+        $place = $this->accountPlacesQuery($context)
+            ->where('street1', $input['street1'])
+            ->where('phone', $input['phone'] ?? null)
+            ->where('city', $input['city'] ?? null)
+            ->where('country', $input['country'] ?? null)->first() ?? new Place([
             'company_uuid' => session('company'),
             'owner_uuid'   => $account->uuid,
             'owner_type'   => Utils::getMutationType($account),
-            'name'         => strtoupper($input['name'] ?: $input['street1']),
+            'name'         => strtoupper(($input['name'] ?? null) ?: $input['street1']),
             'street1'      => strtoupper($input['street1']),
         ]);
 
+        if ($place->exists && (new PortalPickupAddressService())->get($context)?->uuid === $place->uuid) {
+            $changed = collect($input)->except(['location', 'company_uuid', 'owner_uuid', 'owner_type'])
+                ->contains(fn ($value, $key) => $value !== null && (string) $place->$key !== (string) $value);
+            if ($request->filled(['latitude', 'longitude'])) {
+                $changed = $changed || !$place->location
+                    || abs($place->location->getLat() - (float) $request->input('latitude')) > 0.000001
+                    || abs($place->location->getLng() - (float) $request->input('longitude')) > 0.000001;
+            }
+            if (!$changed) {
+                return response()->json(['place' => (new PlaceResource($place))->resolve()]);
+            }
+            $place = new Place();
+        }
         $place->fill($input);
 
         if ($place->location instanceof Point && $place->location->getLat() === 0.0 && $place->location->getLng() === 0.0 && $street1) {
@@ -122,17 +143,19 @@ class PlaceController extends Controller
 
     public function update($id, Request $request)
     {
+        $this->normalizeCoordinates($request);
         $request->validate([
             'name'      => ['nullable', 'string'],
             'street1'   => ['nullable', 'string'],
             'address'   => ['nullable', 'string'],
             'phone'     => ['nullable', 'string'],
-            'latitude'  => ['nullable', 'required_with:longitude'],
-            'longitude' => ['nullable', 'required_with:latitude'],
+            'latitude'  => ['nullable', 'required_with:longitude', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'required_with:latitude', 'numeric', 'between:-180,180'],
         ]);
 
         $context = $this->accountResolver->resolve();
         $place   = $this->findAccountPlace($id, $context);
+        abort_if((new PortalPickupAddressService())->get($context)?->uuid === $place->uuid, 422, 'Edit the account pickup address in Profile/Settings.');
         $input   = $this->placeInput($request);
         $street1 = $request->input('street1') ?: $request->input('address');
 
@@ -160,7 +183,16 @@ class PlaceController extends Controller
         $context = $this->accountResolver->resolve();
         $place   = $this->findAccountPlace($id, $context);
 
-        $place->delete();
+        $context['account']->getConnection()->transaction(function () use ($context, $place) {
+            $account = $context['account']->newQuery()->where('uuid', $context['account']->uuid)->lockForUpdate()->firstOrFail();
+            if (data_get($account->meta, 'customer_portal.pickup_address_uuid') === $place->uuid) {
+                $meta = (array) $account->meta;
+                Arr::forget($meta, 'customer_portal.pickup_address_uuid');
+                $account->meta = $meta;
+                $account->save();
+            }
+            $place->delete();
+        });
 
         return response()->json(['status' => 'ok']);
     }
@@ -201,5 +233,13 @@ class PlaceController extends Controller
             'type',
             'meta',
         ]);
+    }
+
+    protected function normalizeCoordinates(Request $request): void
+    {
+        $coordinates = $request->input('location.coordinates');
+        if (is_array($coordinates) && count($coordinates) >= 2 && !$request->hasAny(['latitude', 'longitude'])) {
+            $request->merge(['latitude' => $coordinates[1], 'longitude' => $coordinates[0]]);
+        }
     }
 }

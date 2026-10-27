@@ -20,6 +20,50 @@ use Money\Parser\DecimalMoneyParser;
 
 class PortalOrderService
 {
+    public function validateNewOrder(Request $request, array $context): void
+    {
+        $input = DeliveryOptions::payloadInput($request->all());
+        Validator::make($request->all(), [
+            'meta.delivery.purpose' => 'nullable|in:transportation',
+            'meta.delivery.service_level' => 'nullable|in:standard,express',
+            'meta.delivery.original_order_uuid' => 'prohibited',
+            'scheduled_at' => 'nullable|date|after:now',
+        ])->validate();
+        if (!empty($input['return']) || !empty($input['waypoints']) || $request->boolean('is_multiple_dropoff_order')) {
+            throw ValidationException::withMessages(['payload' => 'New customer orders support one pickup and one dropoff only. Returns and intermediate stops are not supported.']);
+        }
+        $pickup = (new PortalPickupAddressService())->get($context);
+        if (!$pickup) {
+            throw ValidationException::withMessages(['pickup' => 'Save your account pickup address in Profile/Settings before requesting a delivery.']);
+        }
+        PortalPickupAddressService::validatedInput([
+            'street1' => $pickup->street1, 'phone' => $pickup->phone,
+            'latitude' => $pickup->location?->getLat(), 'longitude' => $pickup->location?->getLng(),
+        ]);
+        $selected = $this->resolveDeliveryPlace($input['pickup'] ?? null, $context);
+        $rawPickup = $input['pickup'] ?? null;
+        if (is_array($rawPickup) && (isset($rawPickup['latitude']) || isset($rawPickup['longitude']))) {
+            Validator::make($rawPickup, [
+                'latitude' => 'required|numeric|between:-90,90',
+                'longitude' => 'required|numeric|between:-180,180',
+            ])->validate();
+            if (abs((float) $rawPickup['latitude'] - $pickup->location->getLat()) > 0.000001 ||
+                abs((float) $rawPickup['longitude'] - $pickup->location->getLng()) > 0.000001) {
+                throw ValidationException::withMessages(['pickup' => 'The pickup coordinates changed. Reload your account pickup and get a new quote.']);
+            }
+        }
+        if (!$selected || $selected->uuid !== $pickup->uuid || $selected->street1 !== $pickup->street1
+            || $selected->phone !== $pickup->phone || !$selected->location
+            || abs($selected->location->getLat() - $pickup->location->getLat()) > 0.000001
+            || abs($selected->location->getLng() - $pickup->location->getLng()) > 0.000001) {
+            throw ValidationException::withMessages(['pickup' => 'Your account pickup address changed. Reload the current pickup address from Profile/Settings and request a new quote.']);
+        }
+        $dropoff = $this->resolveDeliveryPlace($input['dropoff'] ?? null, $context);
+        if (!$dropoff || !is_string($dropoff->phone) || trim($dropoff->phone) === '') {
+            throw ValidationException::withMessages(['dropoff.phone' => 'A dropoff address and contact phone are required.']);
+        }
+    }
+
     public function queryForAccount(array $context)
     {
         $accountCustomerUuids = $this->accountCustomerUuids($context);

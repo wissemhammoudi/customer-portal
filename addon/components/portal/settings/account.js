@@ -19,6 +19,40 @@ export default class PortalSettingsAccountComponent extends Component {
     @tracked currentPassword;
     @tracked newPassword;
     @tracked newPasswordConfirmation;
+    @tracked pickupAddress;
+
+    constructor() {
+        super(...arguments);
+        this.loadPickup.perform();
+    }
+
+    @task *loadPickup() {
+        try {
+            const { place } = yield this.fetch.get('account/pickup-address', {}, { namespace: NAMESPACE });
+            this.pickupAddress = place;
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
+    @action editPickup() {
+        const place = { ...(this.pickupAddress ?? {}) };
+        this.modalsManager.show('modals/portal-order-place-form', {
+            title: 'Account pickup address',
+            acceptButtonText: 'Save account pickup',
+            place,
+            confirm: async () => {
+                try {
+                    const response = await this.fetch.put('account/pickup-address', place, { namespace: NAMESPACE });
+                    this.pickupAddress = response.place;
+                    this.notifications.success('Account pickup saved for app and web.');
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    throw error;
+                }
+            },
+        });
+    }
 
     get isContactAccount() {
         return this.customerSession.accountType !== 'vendor';

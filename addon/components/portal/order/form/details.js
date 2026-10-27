@@ -8,6 +8,22 @@ export default class PortalOrderFormDetailsComponent extends Component {
     @service customFieldsRegistry;
 
     podOptions = ['scan', 'signature', 'photo'];
+    serviceLevels = ['standard', 'express'];
+
+    get invalidSchedule() {
+        const date = this.args.draft?.scheduledAt;
+        return Boolean(date && (!Number.isFinite(Date.parse(date)) || Date.parse(date) <= Date.now()));
+    }
+
+    @action setServiceLevel(serviceLevel) {
+        const meta = this.args.draft.meta;
+        this.customerPortalOrderCreation.setField('meta', { ...meta, delivery: { ...meta.delivery, service_level: serviceLevel } });
+    }
+
+    @action toggleOpening(value) {
+        const meta = this.args.draft.meta;
+        this.customerPortalOrderCreation.setField('meta', { ...meta, delivery: { ...meta.delivery, opening_allowed: value } });
+    }
 
     get collectCash() {
         return this.customerPortalOrderCreation.draft?.payload?.cod_payment_method === 'cash';

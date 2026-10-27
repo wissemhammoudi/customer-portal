@@ -44,6 +44,10 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
         return yield this.fetch.get('places/search', params, normalizeOptions('place'));
     }
 
+    loadPickupAddress() {
+        return this.fetch.get('account/pickup-address', {}, { namespace: NAMESPACE });
+    }
+
     @task *searchPlaceCandidates(params = {}) {
         const response = yield this.fetch.get('places/search', params, { namespace: NAMESPACE });
         return Array.isArray(response?.places) ? response.places : [];
@@ -67,8 +71,7 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
 
     saveCheckoutDraft(draft) {
         const id = draft.checkoutDraftUuid;
-        return this.fetch[id ? 'put' : 'post'](`checkout-drafts${id ? `/${encodeURIComponent(id)}` : ''}`,
-            { input: this.serializeDraft(draft) }, { namespace: NAMESPACE });
+        return this.fetch[id ? 'put' : 'post'](`checkout-drafts${id ? `/${encodeURIComponent(id)}` : ''}`, { input: this.serializeDraft(draft) }, { namespace: NAMESPACE });
     }
 
     @restartableTask *loadServiceQuotes(draft) {
@@ -117,8 +120,11 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
     }
 
     setCollectionReadiness(order, ready, confirmationToken) {
-        return this.fetch.post(`orders/${encodeURIComponent(this.identifier(order))}/collection-readiness`,
-            { ready, ...(confirmationToken ? { confirmation_token: confirmationToken } : {}) }, normalizeOptions('order'));
+        return this.fetch.post(
+            `orders/${encodeURIComponent(this.identifier(order))}/collection-readiness`,
+            { ready, ...(confirmationToken ? { confirmation_token: confirmationToken } : {}) },
+            normalizeOptions('order')
+        );
     }
 
     @task *rescheduleOrder(order, scheduledAt) {

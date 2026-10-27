@@ -138,6 +138,7 @@ class OrderController extends Controller
     protected function createOrderInTransaction(Request $request)
     {
         $context = $this->accountResolver->resolve();
+        $this->orderService->validateNewOrder($request, $context);
         DeliveryOptions::validateInput($request->all());
         $payloadInput = DeliveryOptions::payloadInput($request->all());
         PortalOrderService::codAttributes($payloadInput);

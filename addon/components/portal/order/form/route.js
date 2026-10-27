@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { restartableTask, timeout } from 'ember-concurrency';
+import { hasPhone, validPickup } from '../../../../utils/customer-order-policy';
 
 export default class PortalOrderFormRouteComponent extends Component {
     @service customerPortalOrderActions;
@@ -18,6 +19,10 @@ export default class PortalOrderFormRouteComponent extends Component {
         return [...this.createdPlaces, ...(this.args.places ?? [])];
     }
 
+    get validPickup() {
+        return validPickup(this.args.draft?.payload?.pickup);
+    }
+
     get actionButtons() {
         const buttons = [
             {
@@ -25,19 +30,9 @@ export default class PortalOrderFormRouteComponent extends Component {
                 icon: 'plus',
                 size: 'xs',
                 wrapperClass: 'portal-order-panel-action-button',
-                onClick: () => this.openPlaceForm('pickup'),
+                onClick: () => this.openPlaceForm('dropoff'),
             },
         ];
-
-        if (this.args.draft?.isMultipleDropoffOrder) {
-            buttons.push({
-                text: 'Add Waypoint',
-                icon: 'map-location-dot',
-                size: 'xs',
-                wrapperClass: 'portal-order-panel-action-button',
-                onClick: this.addWaypoint,
-            });
-        }
 
         return buttons;
     }
@@ -73,7 +68,18 @@ export default class PortalOrderFormRouteComponent extends Component {
         return places;
     }
 
-    @action setPayloadPlace(field, place) {
+    @action async setPayloadPlace(field, place) {
+        if (field !== 'dropoff') return;
+        if (!place) {
+            this.customerPortalOrderCreation.setPayloadField(field, null);
+            this.updateRoutePreview();
+            return;
+        }
+        // Confirm unsaved map/search results and legacy entries without a phone before use.
+        if (!this.customerPortalOrderActions.identifier(place) || !hasPhone(place)) {
+            this.openEditPlaceForm(field, place);
+            return;
+        }
         this.customerPortalOrderCreation.setPayloadField(field, place);
         this.updateRoutePreview();
     }
@@ -150,14 +156,19 @@ export default class PortalOrderFormRouteComponent extends Component {
 
     @action async savePlace(place) {
         try {
+            if (!hasPhone(place) || !(place.street1 ?? place.address)?.trim()) {
+                this.notifications.warning('Street address and contact phone are required.');
+                throw new Error('Street address and contact phone are required.');
+            }
             const isEdit = this.placeFormContext?.mode === 'edit';
             const id = this.customerPortalOrderActions.identifier(place);
-            const savedPlace = isEdit && id ? await this.customerPortalOrderActions.updatePlace.perform(place) : place;
+            const isPickup = id && id === this.customerPortalOrderActions.identifier(this.customerPortalOrderCreation.accountPickup);
+            const savedPlace =
+                isEdit && id && !isPickup ? await this.customerPortalOrderActions.updatePlace.perform(place) : await this.customerPortalOrderActions.createPlace.perform(place);
 
             if (!isEdit) {
-                const createdPlace = await this.customerPortalOrderActions.createPlace.perform(place);
-                this.createdPlaces = [createdPlace, ...this.createdPlaces];
-                this.applyPlaceSelection(createdPlace);
+                this.createdPlaces = [savedPlace, ...this.createdPlaces];
+                this.applyPlaceSelection(savedPlace);
             } else {
                 this.applyPlaceSelection(savedPlace);
                 this.updateCreatedPlace(savedPlace);
@@ -168,6 +179,7 @@ export default class PortalOrderFormRouteComponent extends Component {
             this.notifications.success(isEdit ? 'Address updated.' : 'Address saved.');
         } catch (error) {
             this.notifications.serverError(error);
+            throw error;
         }
     }
 

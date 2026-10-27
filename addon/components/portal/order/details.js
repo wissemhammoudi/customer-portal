@@ -11,7 +11,6 @@ export default class PortalOrderDetailsComponent extends Component {
     @service hostRouter;
     @service modalsManager;
     @service notifications;
-    @service customerPortalOrderCreation;
 
     @tracked order = this.args.model?.order;
 
@@ -42,11 +41,6 @@ export default class PortalOrderDetailsComponent extends Component {
                 size: 'sm',
                 renderInPlace: true,
                 items: [
-                    {
-                        text: 'Create Return',
-                        icon: 'rotate-left',
-                        fn: this.createReturn,
-                    },
                     {
                         text: 'View Label',
                         icon: 'file-invoice',
@@ -84,20 +78,6 @@ export default class PortalOrderDetailsComponent extends Component {
 
     @action close() {
         this.hostRouter.transitionTo('customer-portal.portal.orders.index');
-    }
-
-    @action async createReturn() {
-        if (!valueFor(this.order, 'payload.pickup') || !valueFor(this.order, 'payload.dropoff')) {
-            this.notifications.warning('This order does not have two endpoint addresses. Create a Return order and choose the collection and destination manually.');
-            return;
-        }
-        this.customerPortalOrderCreation.pendingReturnOrder = this.order;
-        try {
-            await this.hostRouter.transitionTo('customer-portal.portal.orders.new');
-        } catch (error) {
-            this.customerPortalOrderCreation.pendingReturnOrder = null;
-            this.notifications.serverError(error);
-        }
     }
 
     @action viewLabel() {

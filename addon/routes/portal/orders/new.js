@@ -9,7 +9,12 @@ export default class PortalOrdersNewRoute extends Route {
     @service hostRouter;
 
     async model(params = {}) {
-        const [orderConfigs, places] = await Promise.all([this.customerPortalOrderActions.loadOrderConfigs.perform(), this.customerPortalOrderActions.loadPlaces.perform()]);
+        const [orderConfigs, places, { place: pickup }] = await Promise.all([
+            this.customerPortalOrderActions.loadOrderConfigs.perform(),
+            this.customerPortalOrderActions.loadPlaces.perform(),
+            this.customerPortalOrderActions.loadPickupAddress(),
+        ]);
+        this.customerPortalOrderCreation.accountPickup = pickup;
         let draft;
         const id = params.checkout_draft ?? this.urlSearchParams.get('checkout_draft');
         if (id) {

@@ -55,6 +55,8 @@ Route::prefix(config('customer-portal.api.routing.prefix', 'customer-portal'))->
                                     }
                                 );
                                 $router->get('account', 'AccountController@account');
+                                $router->get('account/pickup-address', 'AccountController@pickupAddress');
+                                $router->put('account/pickup-address', 'AccountController@updatePickupAddress');
                                 $router->post('account/change-password', 'AccountController@changePassword');
                                 $router->post('account/convert-to-vendor', 'CustomerConversionController@convertCurrentContactToVendor');
                                 $router->get('account/personnels', 'AccountPersonnelController@index');
@@ -62,7 +64,7 @@ Route::prefix(config('customer-portal.api.routing.prefix', 'customer-portal'))->
                                 $router->post('account/personnels', 'AccountPersonnelController@store');
                                 $router->delete('account/personnels/{contact}', 'AccountPersonnelController@destroy');
                                 $router->get('order-configs', 'OrderController@orderConfigs');
-                                $router->get('delivery-options', [\Fleetbase\FleetOps\Http\Controllers\Internal\v1\DeliveryOptionsController::class, 'index']);
+                                $router->get('delivery-options', 'DeliveryOptionsController@index');
                                 $router->post('service-quotes/preliminary', 'ServiceQuoteController@preliminary');
                                 $router->post('service-quotes/stripe-checkout-session', 'ServiceQuoteController@createStripeCheckoutSession');
                                 $router->get('service-quotes/stripe-checkout-session', 'ServiceQuoteController@getStripeCheckoutSessionStatus');

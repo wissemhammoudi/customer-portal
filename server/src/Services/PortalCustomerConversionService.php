@@ -30,6 +30,7 @@ class PortalCustomerConversionService
                 'status'       => 'active',
                 'type'         => 'customer',
                 'meta'         => [
+                    'customer_portal'             => data_get($contact->meta, 'customer_portal', []),
                     'converted_from_contact_uuid' => $contact->uuid,
                     'converted_from_contact_type' => $originalType,
                     'converted_by_uuid'           => session('user'),
