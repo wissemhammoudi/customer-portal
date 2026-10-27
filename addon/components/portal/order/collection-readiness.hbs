@@ -1,0 +1,34 @@
+{{#if this.workflow}}
+    <ContentPanel @title="Parcel collection" @open={{true}}>
+        <p class="font-semibold capitalize" data-test-collection-state>{{this.stateLabel}}</p>
+        {{#each this.workflow.original_pickups as |contact|}}
+            <p>Original pickup: {{contact.name}} - {{contact.street1}} - {{contact.phone}}</p>
+        {{/each}}
+        {{#if this.workflow.original_payload_uuid}}
+            <p>Your original collection contacts are preserved. The active delivery route starts at our depot; this is the same order, not a second charge.</p>
+        {{/if}}
+        {{#if this.plannedPickup}}<p>Planned pickup: {{this.plannedPickup}}</p>{{/if}}
+        {{#if this.workflow.planned_delivery_date}}
+            <p>Earliest planned delivery: {{this.workflow.planned_delivery_date}} ({{this.workflow.delivery_timezone}}). Not a guaranteed appointment.</p>
+        {{/if}}
+        <p>Prepare and package all parcels before confirming. Collection and depot receipt are not delivery completion.</p>
+        {{#if this.editable}}
+            {{#if this.preview}}
+                {{#each this.preview.pickup_stops as |stop|}}
+                    <p>Pickup: {{stop.name}} - {{stop.street1}} - {{stop.phone}}</p>
+                {{/each}}
+                <p>Physical parcels: {{this.preview.parcel_count}}</p>
+                {{#each this.preview.parcels as |parcel|}}<p>{{parcel.name}}: {{parcel.quantity}}</p>{{/each}}
+                <p>Check these pickup contacts and every parcel below. Packaging must comply with the guide. This is a planned date, not a guaranteed appointment.</p>
+                <Button @text="Confirm parcels are ready" @onClick={{perform this.confirm true}} @isLoading={{this.confirm.isRunning}} @disabled={{this.confirm.isRunning}} data-test-collection-confirm />
+                <Button @text="Keep preparing" @onClick={{this.keepPreparing}} @disabled={{this.confirm.isRunning}} />
+            {{else if this.awaitingPreparation}}
+                <Button @text="Ready for pickup" @onClick={{perform this.review}} @isLoading={{this.review.isRunning}} @disabled={{this.review.isRunning}} data-test-collection-ready />
+            {{else}}
+                <Button @text="Withdraw readiness" @onClick={{this.withdraw}} @disabled={{this.confirm.isRunning}} data-test-collection-withdraw />
+            {{/if}}
+        {{else}}
+            <p>Contact operations to change collection or delivery details.</p>
+        {{/if}}
+    </ContentPanel>
+{{/if}}

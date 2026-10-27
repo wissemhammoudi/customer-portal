@@ -23,6 +23,25 @@ Fleetbase Customer Portal is a first-party Fleetbase extension that gives custom
 
 The portal is designed for customer-facing logistics workflows: customers can sign in, track orders, place new orders, view invoices, manage documents, open support tickets, update account preferences, and use dashboard widgets tailored to their account.
 
+## Collection readiness (gated rollout)
+
+Enrolled new standard Transport orders show preparation/readiness and planned
+pickup in order details. **Ready for pickup** loads a scoped server preview;
+**Confirm parcels are ready** commits readiness. The preview includes pickup
+contacts, physical parcel count and timezone. **Keep preparing** changes nothing.
+**Withdraw readiness** requires confirmation and is allowed only before planning.
+Calendar/content/cutoff changes invalidate confirmation; HTTP 409 is surfaced and
+the customer must review again. Repeated successful requests do not create orders
+or duplicate readiness history. Failed confirmations do not discard the order.
+
+Collection endpoints are `GET/POST orders/{id}/collection-readiness` in the
+authenticated customer namespace. They enforce company/account ownership and
+lock the order for mutation. Generic rescheduling and contract edits are blocked
+on enrolled orders; planned/collected orders require operations for changes or
+cancellation. Existing orders and Returns are unchanged. Enrollment remains
+disabled until pickup rounds and depot custody are implemented; this is not a
+production activation or Express release.
+
 ## Features
 
 - **Customer authentication** - Customer login, two-factor verification, password recovery, customer session loading, and automatic redirects from customer access URLs.

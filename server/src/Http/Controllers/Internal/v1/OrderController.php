@@ -23,6 +23,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Fleetbase\FleetOps\Support\DeliveryOptions;
+use Fleetbase\FleetOps\Support\CollectionReadiness;
+use Fleetbase\FleetOps\Support\CollectionWorkflow;
 use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
@@ -89,6 +91,26 @@ class OrderController extends Controller
                 $drafts->query($context)->where('uuid', $id)->update(['order_uuid' => $uuid, 'updated_at' => now()]);
             }
             return $response;
+        });
+    }
+
+    public function collectionReadiness(string $id)
+    {
+        $order = $this->orderService->resolveOrder($id, $this->accountResolver->resolve());
+        return response()->json(['collection' => CollectionReadiness::preview($order)]);
+    }
+
+    public function updateCollectionReadiness(Request $request, string $id)
+    {
+        $request->validate(['ready' => 'required|boolean', 'confirmation_token' => 'nullable|string|size:64']);
+        abort_unless(session('user'), 403, 'An authenticated customer is required.');
+        return (new Order())->getConnection()->transaction(function () use ($request, $id) {
+            $order = $this->orderService->resolveOrder($id, $this->accountResolver->resolve(), true);
+            $order->recordCollectionReadiness($request->boolean('ready'), $request->input('confirmation_token'));
+            if ($order->isDirty()) {
+                $order->save();
+            }
+            return response()->json(['order' => $this->orderDetailsResponse($order)]);
         });
     }
 
@@ -538,17 +560,22 @@ class OrderController extends Controller
 
     public function cancelOrder(Request $request, string $id)
     {
-        $context = $this->accountResolver->resolve();
-        $order   = $this->orderService->resolveOrder($id, $context);
+        return (new Order())->getConnection()->transaction(function () use ($request, $id) {
+            $context = $this->accountResolver->resolve();
+            $order = $this->orderService->resolveOrder($id, $context, true);
+            if (CollectionWorkflow::applies($order)) {
+                CollectionReadiness::assertEditable($order);
+            }
 
-        abort_if(in_array($order->status, ['completed', 'done', 'canceled', 'cancelled']), 422, 'This order can no longer be canceled.');
+            abort_if(in_array($order->status, ['completed', 'done', 'canceled', 'cancelled']), 422, 'This order can no longer be canceled.');
 
-        $order->update(['status' => 'canceled']);
-        $request->merge(['with_tracker_data' => true, 'with_eta' => true]);
+            $order->update(['status' => 'canceled']);
+            $request->merge(['with_tracker_data' => true, 'with_eta' => true]);
 
-        return response()->json([
-            'order' => $this->orderDetailsResponse($order->fresh()),
-        ]);
+            return response()->json([
+                'order' => $this->orderDetailsResponse($order->fresh()),
+            ]);
+        });
     }
 
     public function rescheduleOrder(Request $request, string $id)
@@ -557,6 +584,7 @@ class OrderController extends Controller
 
         $context = $this->accountResolver->resolve();
         $order   = $this->orderService->resolveOrder($id, $context);
+        abort_if(CollectionWorkflow::applies($order), 409, 'Collection dates follow the collection calendar. Contact operations for order or schedule changes.');
 
         abort_if(in_array($order->status, ['completed', 'done', 'canceled', 'cancelled']), 422, 'This order can no longer be rescheduled.');
 

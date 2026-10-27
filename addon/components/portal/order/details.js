@@ -19,6 +19,14 @@ export default class PortalOrderDetailsComponent extends Component {
         return this.order && !CLOSED_STATUSES.includes(valueFor(this.order, 'status'));
     }
 
+    get canReschedule() {
+        return this.canModify && !valueFor(this.order, 'meta.collection_workflow');
+    }
+
+    @action updateCollectionOrder(order) {
+        this.order = order;
+    }
+
     get labelUrl() {
         const files = arrayFor(valueFor(this.order, 'files'));
         const labelFile = files.find((file) => ['label', 'order_label', 'shipping_label'].includes(valueFor(file, 'type')) || valueFor(file, 'meta.type') === 'label');
@@ -56,7 +64,7 @@ export default class PortalOrderDetailsComponent extends Component {
                     {
                         text: 'Reschedule',
                         icon: 'calendar',
-                        disabled: !this.canModify,
+                        disabled: !this.canReschedule,
                         fn: this.openRescheduleModal,
                     },
                     {

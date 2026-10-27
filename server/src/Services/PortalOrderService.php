@@ -33,12 +33,13 @@ class PortalOrderService
             ->withoutGlobalScopes();
     }
 
-    public function resolveOrder(string $id, array $context): Order
+    public function resolveOrder(string $id, array $context, bool $lock = false): Order
     {
         return $this->queryForAccount($context)
             ->where(function ($query) use ($id) {
                 $query->where('uuid', $id)->orWhere('public_id', $id);
             })
+            ->when($lock, fn ($query) => $query->lockForUpdate())
             ->firstOrFail();
     }
 

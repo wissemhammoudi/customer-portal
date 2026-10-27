@@ -9,6 +9,7 @@
     class="portal-order-panel-overlay"
 >
     <div class="details-wrapper scrollable">
+        <Portal::Order::CollectionReadiness @order={{this.order}} @onChanged={{this.updateCollectionOrder}} />
         <Portal::Order::Details::Activity @resource={{this.order}} />
         <Portal::Order::Details::Details @resource={{this.order}} />
         <Portal::Order::Details::ServiceRate @resource={{this.order}} />

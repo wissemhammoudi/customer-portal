@@ -111,6 +111,16 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
         return yield this.fetch.post(`orders/${this.identifier(order)}/cancel`, {}, normalizeOptions('order'));
     }
 
+    async collectionReadiness(order) {
+        const response = await this.fetch.get(`orders/${encodeURIComponent(this.identifier(order))}/collection-readiness`, {}, { namespace: NAMESPACE });
+        return response.collection;
+    }
+
+    setCollectionReadiness(order, ready, confirmationToken) {
+        return this.fetch.post(`orders/${encodeURIComponent(this.identifier(order))}/collection-readiness`,
+            { ready, ...(confirmationToken ? { confirmation_token: confirmationToken } : {}) }, normalizeOptions('order'));
+    }
+
     @task *rescheduleOrder(order, scheduledAt) {
         return yield this.fetch.post(`orders/${this.identifier(order)}/reschedule`, { scheduled_at: scheduledAt }, normalizeOptions('order'));
     }
