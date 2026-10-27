@@ -14,6 +14,7 @@ export default class PortalAuthLoginController extends Controller {
     @service hostRouter;
     @service intl;
     @service fetch;
+    @service customerPortalOrderCreation;
 
     /**
      * Whether or not to remember the users session
@@ -131,7 +132,8 @@ export default class PortalAuthLoginController extends Controller {
         }
 
         try {
-            this.session.setRedirect('customer-portal.portal');
+            const checkout = this.customerPortalOrderCreation.getCheckoutRedirect();
+            this.session.setRedirect(checkout ? this.hostRouter.urlFor('customer-portal.portal.orders.new', { queryParams: checkout }) : 'customer-portal.portal');
             await this.session.authenticate('authenticator:fleetbase', { identity, password }, rememberMe, 'auth/login', { namespace: CUSTOMER_PORTAL_NAMESPACE });
         } catch (error) {
             this.failedAttempts++;

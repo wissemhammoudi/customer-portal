@@ -5,6 +5,7 @@ namespace Fleetbase\CustomerPortal\Http\Controllers\Internal\v1;
 use Fleetbase\CustomerPortal\Services\PortalAccountResolver;
 use Fleetbase\CustomerPortal\Services\PortalConfigService;
 use Fleetbase\CustomerPortal\Services\PortalOrderService;
+use Fleetbase\CustomerPortal\Services\PortalCheckoutDraftService;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\OrderConfig as OrderConfigResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Proof as ProofResource;
@@ -19,6 +20,7 @@ use Fleetbase\Models\Transaction;
 use Fleetbase\Models\TransactionItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Fleetbase\FleetOps\Support\DeliveryOptions;
 use Illuminate\Validation\Rule;
@@ -65,7 +67,50 @@ class OrderController extends Controller
 
     public function createOrder(Request $request)
     {
-        return (new Order())->getConnection()->transaction(fn () => $this->createOrderInTransaction($request));
+        return (new Order())->getConnection()->transaction(function () use ($request) {
+            $drafts = new PortalCheckoutDraftService();
+            $context = $this->accountResolver->resolve();
+            $id = $request->input('checkout_draft_uuid');
+            $request->validate(['checkout_draft_uuid' => 'nullable|uuid']);
+            if ($id) {
+                $draft = $drafts->find($id, $context, true);
+                if ($draft->order_uuid) {
+                    $order = $this->orderService->resolveOrder($draft->order_uuid, $context);
+                    $fingerprint = data_get($order->meta, 'customer_portal.creation_fingerprint');
+                    abort_if(!is_string($fingerprint) || !hash_equals($fingerprint, PortalOrderService::creationFingerprint($request->all())),
+                        409, 'This checkout draft already created an order with different delivery details.');
+                    return response()->json(['order' => $this->orderDetailsResponse($order)]);
+                }
+            }
+            $response = $this->createOrderInTransaction($request);
+            if ($id) {
+                $uuid = data_get($response->getData(true), 'order.uuid');
+                abort_if(!$uuid, 500, 'The created order could not be linked to its checkout draft.');
+                $drafts->query($context)->where('uuid', $id)->update(['order_uuid' => $uuid, 'updated_at' => now()]);
+            }
+            return $response;
+        });
+    }
+
+    public function checkoutDrafts()
+    {
+        $drafts = new PortalCheckoutDraftService();
+        $rows = $drafts->query($this->accountResolver->resolve())->whereNull('order_uuid')
+            ->where('expires_at', '>', now())->latest()->limit(5)->get();
+        return response()->json(['drafts' => $rows->map(fn ($draft) => Arr::only($drafts->response($draft), ['uuid', 'expires_at']))]);
+    }
+
+    public function saveCheckoutDraft(Request $request, ?string $id = null)
+    {
+        $drafts = new PortalCheckoutDraftService();
+        $request->validate(['input' => 'required|array']);
+        return response()->json(['draft' => $drafts->response($drafts->save($request->input('input'), $this->accountResolver->resolve(), $id))]);
+    }
+
+    public function checkoutDraft(string $id)
+    {
+        $drafts = new PortalCheckoutDraftService();
+        return response()->json(['draft' => $drafts->response($drafts->find($id, $this->accountResolver->resolve()))]);
     }
 
     protected function createOrderInTransaction(Request $request)
@@ -147,6 +192,11 @@ class OrderController extends Controller
 
                 return response()->json(['order' => $this->orderDetailsResponse($existing)]);
             }
+        }
+        $payments = $this->portalConfig->paymentsConfig();
+        if (($payments['paymentsEnabled'] ?? false) && ($payments['paymentsOnboardCompleted'] ?? false)) {
+            abort_if(!$purchaseRate || !data_get($purchaseRate->meta, 'stripe_checkout_session_id'), 422,
+                'Complete secure checkout before creating this order.');
         }
 
         $payloadUuid = null;

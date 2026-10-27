@@ -1,5 +1,5 @@
 import ResourceActionService, { service } from '@fleetbase/ember-core/services/resource-action';
-import { restartableTask, task, timeout } from 'ember-concurrency';
+import { dropTask, restartableTask, task, timeout } from 'ember-concurrency';
 import { valueFor } from '../utils/model-access';
 
 const NAMESPACE = 'customer-portal/int/v1';
@@ -57,8 +57,18 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
         return yield this.fetch.patch(`places/${this.identifier(place)}`, place, normalizeOptions('place'));
     }
 
-    @task *createOrder(draft) {
+    @dropTask *createOrder(draft) {
         return yield this.fetch.post('orders', this.serializeDraft(draft), normalizeOptions('order'));
+    }
+
+    loadCheckoutDraft(id) {
+        return this.fetch.get(`checkout-drafts/${encodeURIComponent(id)}`, {}, { namespace: NAMESPACE });
+    }
+
+    saveCheckoutDraft(draft) {
+        const id = draft.checkoutDraftUuid;
+        return this.fetch[id ? 'put' : 'post'](`checkout-drafts${id ? `/${encodeURIComponent(id)}` : ''}`,
+            { input: this.serializeDraft(draft) }, { namespace: NAMESPACE });
     }
 
     @restartableTask *loadServiceQuotes(draft) {
@@ -118,6 +128,9 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
             type: draft.orderConfig?.key,
             scheduled_at: draft.scheduledAt,
             notes: draft.notes,
+            internal_id: draft.internalId,
+            checkout_draft_uuid: draft.checkoutDraftUuid,
+            return_addresses_confirmed: draft.returnAddressesConfirmed,
             meta: draft.meta,
             pickup: this.serializePlace(draft.payload?.pickup),
             dropoff: this.serializePlace(draft.payload?.dropoff),

@@ -9,6 +9,25 @@ export default class CustomerPortalOrderCreationService extends Service {
     pendingReturnOrder = null;
     draftId = 0;
 
+    rememberCheckoutRedirect(params) {
+        const query = Object.fromEntries(['checkout_draft', 'checkout_session_id', 'service_quote', 'creating']
+            .filter((key) => typeof params[key] === 'string' && params[key].length <= 512)
+            .map((key) => [key, params[key]]));
+        if (query.checkout_draft) window.sessionStorage.setItem('customer-portal:checkout-redirect', JSON.stringify(query));
+    }
+
+    getCheckoutRedirect() {
+        const saved = window.sessionStorage.getItem('customer-portal:checkout-redirect');
+        if (!saved) return null;
+        return JSON.parse(saved);
+    }
+
+    takeCheckoutRedirect() {
+        const query = this.getCheckoutRedirect();
+        window.sessionStorage.removeItem('customer-portal:checkout-redirect');
+        return query;
+    }
+
     start(orderConfigs = []) {
         this.draftId++;
         const original = this.pendingReturnOrder;
@@ -59,6 +78,33 @@ export default class CustomerPortalOrderCreationService extends Service {
         this.draftId++;
         this.draft = null;
         this.routePreview = [];
+    }
+
+    restoreCheckoutDraft(saved, orderConfigs, restoreQuote = false) {
+        const input = saved.input;
+        const orderConfig = orderConfigs.find((item) =>
+            [valueFor(item, 'uuid'), valueFor(item, 'id'), valueFor(item, 'public_id')].includes(input.order_config));
+        if (!orderConfig) throw new Error('The saved delivery workflow is no longer available.');
+        this.start(orderConfigs);
+        const intermediate = input.waypoints ?? [];
+        const waypoints = intermediate.length && input.pickup && input.dropoff
+            ? [{ ...input.pickup, type: 'pickup' }, ...intermediate, { ...input.dropoff, type: 'dropoff' }]
+            : intermediate;
+        const serviceQuote = restoreQuote && input.service_quote_uuid ? { uuid: input.service_quote_uuid } : null;
+        this.draft = {
+            ...this.draft, orderConfig, checkoutDraftUuid: saved.uuid, meta: input.meta,
+            notes: input.notes, internalId: input.internal_id, scheduledAt: input.scheduled_at,
+            podRequired: input.pod_required, podMethod: input.pod_method,
+            returnAddressesConfirmed: input.return_addresses_confirmed === true,
+            isMultipleDropoffOrder: waypoints.length > 0,
+            payload: { pickup: input.pickup, dropoff: input.dropoff, return: input.return,
+                waypoints: waypoints.map((stop) => ({ place: stop.place ?? stop, type: stop.type ?? 'dropoff' })),
+                entities: input.entities ?? [], cod_amount: input.cod_amount,
+                cod_currency: input.cod_currency, cod_payment_method: input.cod_payment_method },
+            files: (input.files ?? []).map((uuid) => ({ uuid, original_filename: 'Saved checkout document' })),
+            serviceQuote, serviceQuotes: serviceQuote ? [serviceQuote] : [], quotedRevision: serviceQuote ? 0 : null,
+        };
+        return this.draft;
     }
 
     @action setField(field, value) {

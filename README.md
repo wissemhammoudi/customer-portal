@@ -102,7 +102,13 @@ The portal offers optional cash collection in TND, separate from delivery charge
 
 Creation requires a selected quote from the current draft revision. Every route, parcel, delivery-option, schedule, and COD edit invalidates previous rates; late responses cannot restore them. **Refresh delivery rates** supports retry after a rate lookup failure. Pending document uploads block creation, including multiple concurrent uploads; failed uploads notify the customer and clear their pending state so files can be selected again. Successfully uploaded file UUIDs are sent only with creation, not quoting.
 
-The host Console's `tests/unit/services/delivery-creation-parity-test.js` exercises portal and Console services/components together, including upload gating, stale responses, COD boundaries, and draft serialization. Deploy with the backend contract above; this work does not transfer a mobile draft into paid portal checkout or change optional phone-number policy.
+The host Console's `tests/unit/services/delivery-creation-parity-test.js` exercises portal and Console services/components together, including upload gating, stale responses, COD boundaries, draft restoration, repeated submission and payment-finalization retry. Phone numbers remain optional.
+
+Checkout draft transfer uses protected `GET/POST checkout-drafts` and `GET/PUT checkout-drafts/{uuid}` endpoints, scoped to company/account/user. Deploy the parent application's `2026_10_26_000002_create_portal_checkout_drafts.php` migration first. Drafts expire after 24 hours; links use `?checkout_draft={uuid}` with no personal data. The new-order route restores the complete input, converts mobile endpoint-plus-intermediate routes into typed portal waypoints, and refreshes quotes. Before Stripe initialization, the portal persists the selected quote and draft and includes its UUID in the return URI. Cancel/retry retains that state; failed order finalization must not clear callback parameters. Server-side draft row locking and the stored resulting order UUID prevent repeated finalization from creating another order. Completed drafts reopen the existing order.
+
+Opaque checkout parameters survive login and two-factor authentication in per-tab session storage. The new-order controller declares those query parameters and resets them on exit so a later new delivery cannot accidentally reopen the previous checkout.
+
+New checkout sessions include quote/company metadata and require confirmed payment. In-flight pre-upgrade sessions without metadata fail explicitly and need reconciliation before rollout. Local fake-gateway tests do not replace Stripe staging validation, production-database concurrency testing or Ledger acceptance.
 
 ## Installation
 

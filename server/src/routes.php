@@ -67,6 +67,10 @@ Route::prefix(config('customer-portal.api.routing.prefix', 'customer-portal'))->
                                 $router->post('service-quotes/stripe-checkout-session', 'ServiceQuoteController@createStripeCheckoutSession');
                                 $router->get('service-quotes/stripe-checkout-session', 'ServiceQuoteController@getStripeCheckoutSessionStatus');
                                 $router->get('payments/config', 'PaymentController@config');
+                                $router->get('checkout-drafts', 'OrderController@checkoutDrafts');
+                                $router->post('checkout-drafts', 'OrderController@saveCheckoutDraft');
+                                $router->get('checkout-drafts/{id}', 'OrderController@checkoutDraft');
+                                $router->put('checkout-drafts/{id}', 'OrderController@saveCheckoutDraft');
                                 $router->get('places/search', 'PlaceController@search');
                                 $router->get('places/lookup', 'PlaceController@lookup');
                                 $router->post('places', 'PlaceController@create');

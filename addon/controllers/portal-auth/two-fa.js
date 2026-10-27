@@ -16,6 +16,7 @@ export default class PortalAuthTwoFaController extends Controller {
     @service notifications;
     @service session;
     @service intl;
+    @service customerPortalOrderCreation;
 
     /**
      * Tracked property for storing the verification token.
@@ -126,7 +127,14 @@ export default class PortalAuthTwoFaController extends Controller {
             this.notifications.success(this.intl.t('auth.two-fa.verify-code.verification-successful-notification'));
 
             // authenticate user
+            const checkout = this.customerPortalOrderCreation.getCheckoutRedirect();
+            if (checkout) {
+                this.session.setRedirect(this.router.urlFor('customer-portal.portal.orders.new', { queryParams: checkout }));
+            }
             return this.session.manuallyAuthenticate(authToken).then(() => {
+                if (checkout) {
+                    return this.router.transitionTo('customer-portal.portal.orders.new', { queryParams: checkout });
+                }
                 return this.router.transitionTo('customer-portal.portal');
             });
         } catch (error) {

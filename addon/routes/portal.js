@@ -11,6 +11,8 @@ export default class PortalRoute extends Route {
     @service customerSession;
     @service hostRouter;
     @service notifications;
+    @service customerPortalOrderCreation;
+    @service urlSearchParams;
 
     @action loading(transition) {
         this.hookService.execute('customer-portal:portal:loading', this.session, this.hostRouter, transition);
@@ -24,6 +26,11 @@ export default class PortalRoute extends Route {
      * @memberof PortalRoute
      */
     async beforeModel(transition) {
+        if (!this.session.isAuthenticated && this.urlSearchParams.has('checkout_draft')) {
+            this.customerPortalOrderCreation.rememberCheckoutRedirect(Object.fromEntries(
+                ['checkout_draft', 'checkout_session_id', 'service_quote', 'creating'].map((key) => [key, this.urlSearchParams.get(key)])
+            ));
+        }
         this.session.requireAuthentication(transition, 'customer-portal.portal-auth.login');
         this.hookService.execute('customer-portal:portal:before-model', this.session, this.hostRouter, transition);
 
