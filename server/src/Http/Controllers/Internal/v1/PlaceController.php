@@ -59,6 +59,7 @@ class PlaceController extends Controller
     public function create(Request $request)
     {
         $this->normalizeCoordinates($request);
+        $this->normalizePhones($request);
         $request->validate([
             'name'      => ['nullable', 'string'],
             'street1'   => ['nullable', 'string'],
@@ -144,6 +145,7 @@ class PlaceController extends Controller
     public function update($id, Request $request)
     {
         $this->normalizeCoordinates($request);
+        $this->normalizePhones($request);
         $request->validate([
             'name'      => ['nullable', 'string'],
             'street1'   => ['nullable', 'string'],
@@ -170,6 +172,9 @@ class PlaceController extends Controller
         $place->fill(array_filter($input, fn ($value) => $value !== null && $value !== ''));
         if ($request->has('phone')) {
             $place->phone = $request->input('phone');
+        }
+        if ($request->has('phones')) {
+            $place->meta = array_merge((array) $place->getOriginal('meta'), ['phones' => data_get($request->input('meta'), 'phones', [])]);
         }
         $place->save();
 
@@ -233,6 +238,24 @@ class PlaceController extends Controller
             'type',
             'meta',
         ]);
+    }
+
+    protected function normalizePhones(Request $request): void
+    {
+        if (!$request->has('phones')) {
+            return;
+        }
+        $request->validate(['phones' => ['nullable', 'array'], 'phones.*' => ['nullable', 'string', 'max:40'], 'primary_phone' => ['nullable', 'string', 'max:40']]);
+        $clean = fn ($value) => is_string($value) ? preg_replace('/[\s().-]+/', '', trim($value)) : '';
+        $phones = array_values(array_unique(array_filter(array_map($clean, (array) $request->input('phones')))));
+        $primary = $clean($request->input('primary_phone'));
+        if ($primary === '' || !in_array($primary, $phones, true)) {
+            $primary = $phones[0] ?? null;
+        }
+        $extra = array_values(array_filter($phones, fn ($phone) => $phone !== $primary));
+        $meta = (array) $request->input('meta', []);
+        $meta['phones'] = $extra;
+        $request->merge(['phone' => $primary, 'meta' => $meta]);
     }
 
     protected function normalizeCoordinates(Request $request): void

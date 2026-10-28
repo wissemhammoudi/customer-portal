@@ -29,6 +29,14 @@ class PortalPickupAddressService
         $input['street1'] = $input['street1'] ?? $input['address'] ?? '';
         $input['street1'] = is_string($input['street1']) ? trim($input['street1']) : $input['street1'];
         $input['phone'] = isset($input['phone']) && is_string($input['phone']) ? trim($input['phone']) : ($input['phone'] ?? '');
+        if (isset($input['phones']) && is_array($input['phones'])) {
+            $clean = fn ($value) => is_string($value) ? preg_replace('/[\s().-]+/', '', trim($value)) : '';
+            $phones = array_values(array_unique(array_filter(array_map($clean, $input['phones']))));
+            $primary = $clean($input['primary_phone'] ?? '');
+            $primary = in_array($primary, $phones, true) ? $primary : ($phones[0] ?? '');
+            $input['phone'] = $primary;
+            $input['extra_phones'] = array_values(array_filter($phones, fn ($phone) => $phone !== $primary));
+        }
         $input['latitude'] = $input['latitude'] ?? data_get($input, 'location.coordinates.1');
         $input['longitude'] = $input['longitude'] ?? data_get($input, 'location.coordinates.0');
         Validator::make($input, [
@@ -57,10 +65,14 @@ class PortalPickupAddressService
                 'name', 'street1', 'street2', 'city', 'province', 'postal_code', 'neighborhood',
                 'district', 'building', 'security_access_code', 'country', 'phone',
             ]);
-            $matches = function ($candidate) use ($values, $input) {
+            $extra = $input['extra_phones'] ?? [];
+            $matches = function ($candidate) use ($values, $input, $extra) {
                 if (!$candidate || !$candidate->location ||
                     abs($candidate->location->getLat() - (float) $input['latitude']) > 0.000001 ||
                     abs($candidate->location->getLng() - (float) $input['longitude']) > 0.000001) {
+                    return false;
+                }
+                if (array_values((array) data_get($candidate->meta, 'phones', [])) !== $extra) {
                     return false;
                 }
                 foreach ($values as $key => $value) {
@@ -78,6 +90,7 @@ class PortalPickupAddressService
             if (!$place) {
                 $place = new Place();
                 $place->fill($values);
+                $place->meta = array_merge((array) $place->meta, ['phones' => $extra]);
                 $place->company_uuid = session('company');
                 $place->owner_uuid = $account->uuid;
                 $place->owner_type = Utils::getMutationType($account);
