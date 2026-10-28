@@ -1,27 +1,26 @@
 <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
     <div class="grid grid-cols-1 gap-3">
-        <InputGroup @name="Delivery workflow" @required={{true}}>
-            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                <PowerSelect
-                    @options={{@orderConfigs}}
-                    @selected={{@draft.orderConfig}}
-                    @onChange={{this.setOrderConfig}}
-                    @placeholder="Select order type"
-                    @triggerClass="form-select form-input"
-                    @renderInPlace={{true}}
-                    as |orderConfig|
-                >
-                    <div class="text-sm">
-                        <div class="font-semibold normalize-in-trigger">{{orderConfig.name}}</div>
-                        <div class="hide-from-trigger">{{n-a orderConfig.description}}</div>
-                    </div>
-                </PowerSelect>
-            </div>
+        <InputGroup @name="Order purpose" @required={{true}}>
+            <Button
+                @text="Delivery"
+                @type={{if (eq @draft.meta.delivery.purpose "transportation") "primary" "default"}}
+                @onClick={{fn this.setPurpose "transportation"}}
+                @disabled={{@draft.meta.delivery.original_order_uuid}}
+            />
+            <Button
+                @text="Return"
+                @type={{if (eq @draft.meta.delivery.purpose "return") "primary" "default"}}
+                @onClick={{fn this.setPurpose "return"}}
+                @disabled={{@draft.meta.delivery.original_order_uuid}}
+            />
+            {{#if (eq @draft.meta.delivery.purpose "return")}}
+                <p>Return quotes include a 20% discount, calculated by the server.</p>
+            {{/if}}
         </InputGroup>
         <InputGroup @name="Service">
             <Select @options={{this.serviceLevels}} @value={{@draft.meta.delivery.service_level}} @onSelect={{this.setServiceLevel}} />
             {{#if (eq @draft.meta.delivery.service_level "express")}}
-                <InfoBlock @text="Express pricing is not configured yet. Choose Standard to request a quote." />
+                <InfoBlock @text="Express is not currently available. Choose Standard to request a quote." />
             {{/if}}
         </InputGroup>
         <InputGroup @name="Scheduled At (optional)" @helpText="Leave blank for an unscheduled delivery. Select a future date and time.">

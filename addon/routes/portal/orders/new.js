@@ -25,7 +25,8 @@ export default class PortalOrdersNewRoute extends Route {
             }
             draft = this.customerPortalOrderCreation.restoreCheckoutDraft(saved, orderConfigs, Boolean(params.checkout_session_id || this.urlSearchParams.has('checkout_session_id')));
         } else {
-            draft = this.customerPortalOrderCreation.start(orderConfigs);
+            const originalOrder = this.customerPortalOrderCreation.pendingReturnOrder;
+            draft = originalOrder ? this.customerPortalOrderCreation.startReturn(orderConfigs, originalOrder) : this.customerPortalOrderCreation.start(orderConfigs);
         }
         return { draft, orderConfigs, places };
     }

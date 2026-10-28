@@ -20,7 +20,9 @@ export default class CustomerPortalOrderValidationService extends Service {
         }
 
         const required = Boolean(draft.meta?.delivery);
-        if (draft.meta?.delivery?.service_level === 'express') {
+        const serviceLevel = draft.meta?.delivery?.service_level ?? 'standard';
+        const availableServices = this.deliveryOptions.catalogue?.service_levels;
+        if (serviceLevel !== 'standard' || (availableServices && !availableServices.some((item) => item.value === serviceLevel && item.available !== false))) {
             return false;
         }
         if (draft.meta?.delivery?.purpose === 'return' && draft.meta.delivery.original_order_uuid && !draft.returnAddressesConfirmed) {

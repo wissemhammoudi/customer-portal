@@ -79,7 +79,50 @@ export default class CustomerPortalOrderCreationService extends Service {
     reset() {
         this.draftId++;
         this.draft = null;
+        this.pendingReturnOrder = null;
         this.routePreview = [];
+    }
+
+    startReturn(orderConfigs, originalOrder) {
+        this.start(orderConfigs);
+        const orderConfigId = valueFor(originalOrder, 'order_config_uuid') ?? valueFor(originalOrder, 'order_config.id');
+        const orderConfig = orderConfigs.find((item) => [valueFor(item, 'uuid'), valueFor(item, 'id')].includes(orderConfigId)) ?? this.draft.orderConfig;
+        this.draft = {
+            ...this.draft,
+            orderConfig,
+            meta: {
+                delivery: {
+                    ...this.draft.meta.delivery,
+                    purpose: 'return',
+                    original_order_uuid: valueFor(originalOrder, 'uuid') ?? valueFor(originalOrder, 'id'),
+                },
+            },
+            payload: {
+                ...this.draft.payload,
+                pickup: valueFor(originalOrder, 'payload.dropoff'),
+                dropoff: valueFor(originalOrder, 'payload.pickup'),
+            },
+        };
+        return this.draft;
+    }
+
+    @action setPurpose(purpose) {
+        if (!this.draft || this.draft.meta?.delivery?.original_order_uuid || !['transportation', 'return'].includes(purpose) || purpose === this.draft.meta?.delivery?.purpose) return;
+        this.draft = {
+            ...this.draft,
+            meta: { ...this.draft.meta, delivery: { ...this.draft.meta?.delivery, purpose } },
+            payload: {
+                ...this.draft.payload,
+                pickup: purpose === 'return' ? null : this.accountPickup,
+                dropoff: purpose === 'return' ? this.accountPickup : null,
+                cod_amount: null,
+                cod_currency: null,
+                cod_payment_method: null,
+            },
+            pickupChanged: false,
+            returnAddressesConfirmed: false,
+        };
+        this.invalidateServiceQuotes();
     }
 
     restoreCheckoutDraft(saved, orderConfigs, restoreQuote = false) {
@@ -121,17 +164,18 @@ export default class CustomerPortalOrderCreationService extends Service {
             this.draft = {
                 ...this.draft,
                 blockedReason:
-                    'This saved draft contains a return, unsupported service, or intermediate stops. It cannot be submitted. Start a new transportation order; the saved draft has not been changed.',
+                    'This saved draft contains an unsupported purpose, service, return-to-pickup or intermediate stops. It cannot be submitted. Start a new delivery or return order; the saved draft has not been changed.',
             };
-        } else if (!samePickup(input.pickup, this.accountPickup)) {
+        } else if (!input.meta?.delivery?.original_order_uuid && !samePickup(input.meta?.delivery?.purpose === 'return' ? input.dropoff : input.pickup, this.accountPickup)) {
             this.draft = { ...this.draft, pickupChanged: true, serviceQuote: null, serviceQuotes: [], quotedRevision: null };
         }
         return this.draft;
     }
 
     @action acknowledgePickupChange() {
+        if (!this.draft?.pickupChanged || this.draft.meta?.delivery?.original_order_uuid) return;
         this.draft = { ...this.draft, pickupChanged: false };
-        this.setPayloadField('pickup', this.accountPickup);
+        this.setPayloadField(this.draft.meta?.delivery?.purpose === 'return' ? 'dropoff' : 'pickup', this.accountPickup);
     }
 
     @action setField(field, value) {
@@ -283,22 +327,7 @@ export default class CustomerPortalOrderCreationService extends Service {
     }
 
     invalidateQuotesForField(field) {
-        if (
-            [
-                'orderConfig',
-                'scheduledAt',
-                'pickup',
-                'dropoff',
-                'return',
-                'waypoints',
-                'entities',
-                'meta',
-                'returnAddressesConfirmed',
-                'cod_amount',
-                'cod_currency',
-                'cod_payment_method',
-            ].includes(field)
-        ) {
+        if (['orderConfig', 'scheduledAt', 'pickup', 'dropoff', 'return', 'waypoints', 'entities', 'meta', 'cod_amount', 'cod_currency', 'cod_payment_method'].includes(field)) {
             this.invalidateServiceQuotes();
         }
     }

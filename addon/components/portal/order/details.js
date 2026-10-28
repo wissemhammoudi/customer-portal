@@ -4,10 +4,12 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { arrayFor, valueFor } from '../../../utils/model-access';
 
-const CLOSED_STATUSES = ['completed', 'done', 'canceled', 'cancelled'];
+const CANCELLED_STATUSES = ['canceled', 'cancelled', 'order_canceled', 'order_cancelled'];
+const CLOSED_STATUSES = ['completed', 'done', ...CANCELLED_STATUSES];
 
 export default class PortalOrderDetailsComponent extends Component {
     @service customerPortalOrderActions;
+    @service customerPortalOrderCreation;
     @service hostRouter;
     @service modalsManager;
     @service notifications;
@@ -20,6 +22,16 @@ export default class PortalOrderDetailsComponent extends Component {
 
     get canReschedule() {
         return this.canModify && !valueFor(this.order, 'meta.collection_workflow');
+    }
+
+    get canReturn() {
+        return Boolean(this.order && !CANCELLED_STATUSES.includes(valueFor(this.order, 'status')) && valueFor(this.order, 'payload.pickup') && valueFor(this.order, 'payload.dropoff'));
+    }
+
+    @action returnOrder() {
+        if (!this.canReturn) return;
+        this.customerPortalOrderCreation.pendingReturnOrder = this.order;
+        this.hostRouter.transitionTo('customer-portal.portal.orders.new');
     }
 
     @action updateCollectionOrder(order) {
@@ -41,6 +53,12 @@ export default class PortalOrderDetailsComponent extends Component {
                 size: 'sm',
                 renderInPlace: true,
                 items: [
+                    {
+                        text: 'Return',
+                        icon: 'rotate-left',
+                        disabled: !this.canReturn,
+                        fn: this.returnOrder,
+                    },
                     {
                         text: 'View Label',
                         icon: 'file-invoice',

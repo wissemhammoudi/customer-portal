@@ -24,13 +24,17 @@ class PortalOrderService
     {
         $input = DeliveryOptions::payloadInput($request->all());
         Validator::make($request->all(), [
-            'meta.delivery.purpose' => 'nullable|in:transportation',
+            'meta.delivery.purpose' => 'nullable|in:transportation,return',
             'meta.delivery.service_level' => 'nullable|in:standard,express',
-            'meta.delivery.original_order_uuid' => 'prohibited',
+            'meta.delivery.original_order_uuid' => 'nullable|string|max:64|prohibited_unless:meta.delivery.purpose,return',
             'scheduled_at' => 'nullable|date|after:now',
         ])->validate();
         if (!empty($input['return']) || !empty($input['waypoints']) || $request->boolean('is_multiple_dropoff_order')) {
-            throw ValidationException::withMessages(['payload' => 'New customer orders support one pickup and one dropoff only. Returns and intermediate stops are not supported.']);
+            throw ValidationException::withMessages(['payload' => 'Customer deliveries support one pickup and one dropoff only. Intermediate stops are not supported.']);
+        }
+        if ($request->input('meta.delivery.purpose') === 'return') {
+            $this->validateReturn($request, $context, $input);
+            return;
         }
         $pickup = (new PortalPickupAddressService())->get($context);
         if (!$pickup) {
@@ -62,6 +66,52 @@ class PortalOrderService
         if (!$dropoff || !is_string($dropoff->phone) || trim($dropoff->phone) === '') {
             throw ValidationException::withMessages(['dropoff.phone' => 'A dropoff address and contact phone are required.']);
         }
+    }
+
+    protected function validateReturn(Request $request, array $context, array $input): void
+    {
+        $returns = new PortalReturnService();
+        $originalId = $request->input('meta.delivery.original_order_uuid');
+        $pickup = $this->resolveDeliveryPlace($input['pickup'] ?? null, $context);
+        if ($originalId) {
+            $original = $this->resolveOrder($originalId, $context);
+            $meta = $request->input('meta', []);
+            data_set($meta, 'delivery.original_order_uuid', $original->uuid);
+            $request->merge(['meta' => $meta]);
+            $returns->assertReversedRoute($original, $pickup, $this->resolveDeliveryPlace($input['dropoff'] ?? null, $context));
+            $returns->originalPrice($original);
+        } else {
+            $saved = (new PortalPickupAddressService())->get($context);
+            if (!$saved) {
+                throw ValidationException::withMessages(['dropoff' => 'Save your account address in Profile/Settings before requesting a return.']);
+            }
+            PortalPickupAddressService::validatedInput([
+                'street1' => $saved->street1, 'phone' => $saved->phone,
+                'latitude' => $saved->location?->getLat(), 'longitude' => $saved->location?->getLng(),
+            ]);
+            if (empty($input['dropoff'])) {
+                if (is_array($request->input('payload'))) {
+                    $payload = $request->input('payload');
+                    $payload['dropoff'] = $saved->uuid;
+                    $request->merge(['payload' => $payload]);
+                } else {
+                    $request->merge(['dropoff' => $saved->uuid]);
+                }
+                $input['dropoff'] = $saved->uuid;
+            }
+            $returns->assertSameEndpoint($this->resolveDeliveryPlace($input['dropoff'], $context), $saved, 'dropoff');
+        }
+        if (!$pickup || !is_string($pickup->phone) || trim($pickup->phone) === '') {
+            throw ValidationException::withMessages(['pickup.phone' => 'A return pickup address and contact phone are required.']);
+        }
+    }
+
+    public function deliveryOrderConfigs()
+    {
+        return OrderConfig::where('company_uuid', session('company'))->where('key', 'transport')
+            ->where(function ($query) {
+                $query->whereNull('namespace')->orWhere('namespace', 'not like', '%storefront%');
+            });
     }
 
     public function queryForAccount(array $context)
@@ -101,11 +151,11 @@ class PortalOrderService
             ->value('uuid');
     }
 
-    public function resolveOrderConfig(Request $request): ?OrderConfig
+    public function resolveOrderConfig(Request $request, ?array $enabled = null): ?OrderConfig
     {
         $orderConfigId = $request->input('order_config', $request->input('type'));
         if ($orderConfigId) {
-            $orderConfig = OrderConfig::where('company_uuid', session('company'))
+            $orderConfig = $this->deliveryOrderConfigs()
                 ->where(function ($query) use ($orderConfigId) {
                     $query->where('uuid', $orderConfigId)->orWhere('public_id', $orderConfigId)->orWhere('key', $orderConfigId);
                 })
@@ -114,7 +164,26 @@ class PortalOrderService
             return $orderConfig;
         }
 
-        return OrderConfig::where('company_uuid', session('company'))->first();
+        return $this->deliveryOrderConfigs()->when(is_array($enabled), function ($query) use ($enabled) {
+            $query->where(function ($query) use ($enabled) {
+                $query->whereIn('uuid', $enabled)->orWhereIn('public_id', $enabled);
+            });
+        })->first();
+    }
+
+    public function resolvedRouteFingerprint(array $input, array $context): string
+    {
+        $payload = DeliveryOptions::payloadInput($input);
+        $route = [];
+        foreach (['pickup', 'dropoff'] as $field) {
+            $place = $this->resolveDeliveryPlace($payload[$field] ?? null, $context);
+            $route[$field] = $place ? [
+                'street1' => $place->street1, 'phone' => $place->phone,
+                'latitude' => $place->location?->getLat(), 'longitude' => $place->location?->getLng(),
+            ] : null;
+        }
+
+        return hash('sha256', json_encode($route, JSON_THROW_ON_ERROR));
     }
 
     public function buildPayloadFromInput(array $payloadInput, array $context): Payload
@@ -329,9 +398,21 @@ class PortalOrderService
 
     protected function findAccountPlaceByIdentifier($identifier, array $context): ?Place
     {
-        return Place::where('company_uuid', session('company'))
-            ->where('owner_uuid', $context['account']->uuid)
-            ->where('owner_type', Utils::getMutationType($context['account']))
+        $owned = Place::where('company_uuid', session('company'))
+            ->where('owner_uuid', $context['account']->uuid)->where('owner_type', Utils::getMutationType($context['account']))
+            ->where(function ($query) use ($identifier) {
+                $query->where('uuid', $identifier)->orWhere('public_id', $identifier);
+            })->first();
+        if ($owned) {
+            return $owned;
+        }
+        $payloads = Payload::where('company_uuid', session('company'))
+            ->whereIn('uuid', $this->queryForAccount($context)->select('payload_uuid'));
+        return Place::withoutGlobalScopes()->where('company_uuid', session('company'))
+            ->where(function ($query) use ($payloads) {
+                $query->whereIn('uuid', (clone $payloads)->select('pickup_uuid'))
+                    ->orWhereIn('uuid', (clone $payloads)->select('dropoff_uuid'));
+            })
             ->where(function ($query) use ($identifier) {
                 $query->where('uuid', $identifier)->orWhere('public_id', $identifier);
             })

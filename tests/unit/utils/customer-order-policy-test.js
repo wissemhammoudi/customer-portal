@@ -13,11 +13,13 @@ module('Unit | Utils | customer order policy', function () {
         assert.false(hasPhone({ phone: ' ' }));
     });
 
-    test('hidden route or return data never becomes a supported new order', function (assert) {
+    test('delivery and return purposes support Standard and Express but not hidden route data', function (assert) {
         assert.false(unsupportedOrder({ meta: { delivery: { purpose: 'transportation', service_level: 'standard' } } }));
         assert.false(unsupportedOrder({ meta: { delivery: { service_level: 'express' } } }));
-        assert.true(unsupportedOrder({ meta: { delivery: { purpose: 'return' } } }));
+        assert.false(unsupportedOrder({ meta: { delivery: { purpose: 'return' } } }));
+        assert.false(unsupportedOrder({ meta: { delivery: { purpose: 'return', original_order_uuid: 'old-order', service_level: 'express' } } }));
         assert.true(unsupportedOrder({ meta: { delivery: { original_order_uuid: 'old-order' } } }));
+        assert.true(unsupportedOrder({ meta: { delivery: { purpose: 'storefront' } } }));
         assert.true(unsupportedOrder({ return: { street1: 'Warehouse' } }));
         assert.true(unsupportedOrder({ payload: { waypoints: [{ place: 'a' }] } }));
         assert.true(unsupportedOrder({ meta: { delivery: { service_level: 'overnight' } } }));

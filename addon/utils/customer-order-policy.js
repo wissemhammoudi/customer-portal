@@ -30,8 +30,8 @@ export function unsupportedOrder(input) {
     const payload = input?.payload ?? input ?? {};
     const delivery = input?.meta?.delivery;
     return Boolean(
-        (delivery?.purpose && delivery.purpose !== 'transportation') ||
-        delivery?.original_order_uuid ||
+        (delivery?.purpose && !['transportation', 'return'].includes(delivery.purpose)) ||
+        (delivery?.original_order_uuid && delivery?.purpose !== 'return') ||
         (delivery?.service_level && !['standard', 'express'].includes(delivery.service_level)) ||
         payload.return ||
         payload.waypoints?.length ||

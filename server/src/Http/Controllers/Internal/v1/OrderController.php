@@ -6,6 +6,8 @@ use Fleetbase\CustomerPortal\Services\PortalAccountResolver;
 use Fleetbase\CustomerPortal\Services\PortalConfigService;
 use Fleetbase\CustomerPortal\Services\PortalOrderService;
 use Fleetbase\CustomerPortal\Services\PortalCheckoutDraftService;
+use Fleetbase\CustomerPortal\Services\PortalReturnService;
+use Fleetbase\CustomerPortal\Services\PortalRoutePreviewService;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\OrderConfig as OrderConfigResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Proof as ProofResource;
@@ -94,6 +96,11 @@ class OrderController extends Controller
         });
     }
 
+    public function routePreview(Request $request, PortalRoutePreviewService $preview)
+    {
+        return response()->json($preview->preview($request, $this->accountResolver->resolve()));
+    }
+
     public function collectionReadiness(string $id)
     {
         $order = $this->orderService->resolveOrder($id, $this->accountResolver->resolve());
@@ -144,7 +151,8 @@ class OrderController extends Controller
         PortalOrderService::codAttributes($payloadInput);
         $deliveryFingerprint = DeliveryOptions::fingerprint($request->all());
         $originalId = $request->input('meta.delivery.original_order_uuid');
-        $originalOrder = $originalId ? $this->orderService->resolveOrder($originalId, $context) : null;
+        // All linked returns serialize on their original, even when using different quotes/drafts.
+        $originalOrder = $originalId ? $this->orderService->resolveOrder($originalId, $context, true) : null;
         $request->validate([
             'type'                       => 'nullable|string',
             'order_config'               => 'nullable',
@@ -178,11 +186,7 @@ class OrderController extends Controller
         ]);
 
         $enabledOrderConfigIds = $this->portalConfig->enabledOrderConfigIds();
-        if (!$request->filled('order_config') && !$request->filled('type') && is_array($enabledOrderConfigIds) && count($enabledOrderConfigIds) > 0) {
-            $request->merge(['order_config' => $enabledOrderConfigIds[0]]);
-        }
-
-        $orderConfig = $this->orderService->resolveOrderConfig($request);
+        $orderConfig = $this->orderService->resolveOrderConfig($request, $enabledOrderConfigIds);
         $this->abortIfOrderConfigDisabled($orderConfig, $enabledOrderConfigIds);
         abort_if(!$orderConfig, 422, 'No order config available for this company.');
 
@@ -206,15 +210,41 @@ class OrderController extends Controller
             if ($fingerprint || $request->has('meta.delivery')) {
                 abort_if(!is_string($fingerprint) || !hash_equals($fingerprint, $deliveryFingerprint), 422, 'The delivery details changed. Get a new service quote before creating this order.');
             }
+            $routeFingerprint = data_get($quote->meta, 'customer_portal.resolved_route_fingerprint');
+            if ($routeFingerprint) {
+                abort_unless(is_string($routeFingerprint) && hash_equals($routeFingerprint,
+                    $this->orderService->resolvedRouteFingerprint($request->all(), $context)), 422, 'A saved delivery address changed. Get a new quote.');
+            }
         }
         $creationFingerprint = PortalOrderService::creationFingerprint($request->all());
-        if ($serviceQuote && $request->has('meta.delivery')) {
+        if ($serviceQuote) {
             $existing = $this->orderService->existingOrderForQuote($serviceQuote->uuid, $creationFingerprint, $context);
             if ($existing) {
                 $request->merge(['with_tracker_data' => true, 'with_eta' => true]);
 
                 return response()->json(['order' => $this->orderDetailsResponse($existing)]);
             }
+            if ($originalOrder) {
+                $returns = new PortalReturnService();
+                $returns->assertReversedRoute($originalOrder,
+                    $this->orderService->resolveDeliveryPlace($payloadInput['pickup'] ?? null, $context),
+                    $this->orderService->resolveDeliveryPlace($payloadInput['dropoff'] ?? null, $context));
+                abort_if(Order::withoutGlobalScopes()->where('company_uuid', session('company'))
+                    ->where('meta->delivery->original_order_uuid', $originalOrder->uuid)
+                    ->where('meta->delivery->purpose', 'return')->whereNull('deleted_at')
+                    ->where(function ($query) {
+                        $query->whereNull('status')->orWhereNotIn('status', PortalReturnService::CANCELLED_STATUSES);
+                    })->lockForUpdate()->first(), 409, 'An active return already exists for this delivery.');
+            }
+            if ($request->input('meta.delivery.purpose') === 'return') {
+                abort_unless($serviceQuote, 422, 'Select a current return delivery quote.');
+                (new PortalReturnService())->assertQuotePrice($serviceQuote, $originalOrder);
+            }
+        }
+        abort_if($serviceQuote?->expired_at && now()->greaterThanOrEqualTo($serviceQuote->expired_at), 422, 'This delivery quote expired. Get a new quote.');
+        if ($purchaseRate && data_get($purchaseRate->meta, 'stripe_checkout_session_id')) {
+            abort_if((string) data_get($purchaseRate->meta, 'locked_price') !== (string) $serviceQuote?->amount,
+                422, 'The checkout payment does not match the delivery fee. Contact support.');
         }
         $payments = $this->portalConfig->paymentsConfig();
         if (($payments['paymentsEnabled'] ?? false) && ($payments['paymentsOnboardCompleted'] ?? false)) {
@@ -532,7 +562,8 @@ class OrderController extends Controller
     public function orderConfigs()
     {
         $enabledOrderConfigs = $this->portalConfig->enabledOrderConfigIds();
-        $query               = OrderConfig::where('company_uuid', session('company'));
+        $this->accountResolver->resolve();
+        $query               = $this->orderService->deliveryOrderConfigs();
 
         if (is_array($enabledOrderConfigs)) {
             $query->where(function ($query) use ($enabledOrderConfigs) {

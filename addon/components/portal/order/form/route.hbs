@@ -1,35 +1,59 @@
 <ContentPanel @title="Route" @open={{true}} @actionButtons={{this.actionButtons}} @wrapperClass="bordered-top">
-    <InputGroup @name="Account pickup (read-only)" @required={{true}}>
-        {{#if @draft.payload.pickup}}
+    {{#if this.isLinkedReturn}}
+        <InputGroup @name="Return pickup (original dropoff)" @required={{true}}>
             <div class="form-input">
                 {{place-address @draft.payload.pickup}}
                 <div>{{@draft.payload.pickup.phone}}</div>
             </div>
-        {{/if}}
-        <p>Pickup is shared by everyone on your seller account. Edit it only in Profile/Settings.</p>
-        {{#unless this.validPickup}}
-            <InfoBlock @text="Save an account pickup address with street, phone and coordinates in Profile/Settings before requesting a quote or creating an order." />
-        {{/unless}}
-    </InputGroup>
-    <InputGroup @name="Dropoff" @required={{true}} @helpText="A contact phone is required. Confirmed addresses are saved to your address book automatically.">
-        <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-            <PowerSelect
-                @options={{this.places}}
-                @search={{perform this.searchPlaces}}
-                @searchEnabled={{true}}
-                @selected={{@draft.payload.dropoff}}
-                @onChange={{fn this.setPayloadPlace "dropoff"}}
-                @placeholder="Select dropoff place"
-                @allowClear={{true}}
-                @triggerClass="form-select form-input"
-                @renderInPlace={{true}}
-                as |place|
-            >
-                {{place-address place}}
-            </PowerSelect>
-        </div>
-        {{#if @draft.payload.dropoff}}
-            <Button @text="Edit dropoff" @onClick={{fn this.openEditPlaceForm "dropoff" @draft.payload.dropoff}} />
-        {{/if}}
-    </InputGroup>
+        </InputGroup>
+        <InputGroup @name="Return dropoff (original pickup)" @required={{true}}>
+            <div class="form-input">
+                {{place-address @draft.payload.dropoff}}
+                <div>{{@draft.payload.dropoff.phone}}</div>
+            </div>
+        </InputGroup>
+        <p>This route reverses the original order's saved addresses, even if your account pickup has changed.</p>
+        <label>
+            <input type="checkbox" checked={{@draft.returnAddressesConfirmed}} {{on "change" this.confirmReturnAddresses}} />
+            I have reviewed and confirmed both return addresses.
+        </label>
+    {{else}}
+        <InputGroup @name={{if this.isReturn "Return dropoff — account pickup (read-only)" "Account pickup (read-only)"}} @required={{true}}>
+            {{#if this.fixedPlace}}
+                <div class="form-input">
+                    {{place-address this.fixedPlace}}
+                    <div>{{this.fixedPlace.phone}}</div>
+                </div>
+            {{/if}}
+            <p>This address is shared by everyone on your seller account. Edit it only in Profile/Settings.</p>
+            {{#unless this.validPickup}}
+                <InfoBlock @text="Save an account pickup address with street, phone and coordinates in Profile/Settings before requesting a quote or creating an order." />
+            {{/unless}}
+        </InputGroup>
+        <InputGroup
+            @name={{if this.isReturn "Return pickup" "Dropoff"}}
+            @required={{true}}
+            @helpText="A contact phone is required. Confirmed addresses are saved to your address book automatically."
+        >
+            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                <PowerSelect
+                    @options={{this.places}}
+                    @search={{perform this.searchPlaces}}
+                    @searchEnabled={{true}}
+                    @selected={{this.selectedPlace}}
+                    @onChange={{fn this.setPayloadPlace this.editableField}}
+                    @placeholder={{if this.isReturn "Select return pickup place" "Select dropoff place"}}
+                    @allowClear={{true}}
+                    @triggerClass="form-select form-input"
+                    @renderInPlace={{true}}
+                    as |place|
+                >
+                    {{place-address place}}
+                </PowerSelect>
+            </div>
+            {{#if this.selectedPlace}}
+                <Button @text={{if this.isReturn "Edit return pickup" "Edit dropoff"}} @onClick={{fn this.openEditPlaceForm this.editableField this.selectedPlace}} />
+            {{/if}}
+        </InputGroup>
+    {{/if}}
 </ContentPanel>

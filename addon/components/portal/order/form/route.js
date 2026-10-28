@@ -20,17 +20,38 @@ export default class PortalOrderFormRouteComponent extends Component {
     }
 
     get validPickup() {
-        return validPickup(this.args.draft?.payload?.pickup);
+        return validPickup(this.args.draft?.payload?.[this.isReturn ? 'dropoff' : 'pickup']);
+    }
+
+    get isReturn() {
+        return this.args.draft?.meta?.delivery?.purpose === 'return';
+    }
+
+    get isLinkedReturn() {
+        return this.isReturn && Boolean(this.args.draft?.meta?.delivery?.original_order_uuid);
+    }
+
+    get editableField() {
+        return this.isReturn ? 'pickup' : 'dropoff';
+    }
+
+    get selectedPlace() {
+        return this.args.draft?.payload?.[this.editableField];
+    }
+
+    get fixedPlace() {
+        return this.args.draft?.payload?.[this.isReturn ? 'dropoff' : 'pickup'];
     }
 
     get actionButtons() {
+        if (this.isLinkedReturn) return [];
         const buttons = [
             {
                 text: 'New Address',
                 icon: 'plus',
                 size: 'xs',
                 wrapperClass: 'portal-order-panel-action-button',
-                onClick: () => this.openPlaceForm('dropoff'),
+                onClick: () => this.openPlaceForm(this.editableField),
             },
         ];
 
@@ -69,7 +90,7 @@ export default class PortalOrderFormRouteComponent extends Component {
     }
 
     @action async setPayloadPlace(field, place) {
-        if (field !== 'dropoff') return;
+        if (this.isLinkedReturn || field !== this.editableField) return;
         if (!place) {
             this.customerPortalOrderCreation.setPayloadField(field, null);
             this.updateRoutePreview();
@@ -119,6 +140,7 @@ export default class PortalOrderFormRouteComponent extends Component {
     }
 
     @action openPlaceForm(field, index = null) {
+        if (this.isLinkedReturn || field !== this.editableField) return;
         this.placeFormContext = { field, index, mode: 'create' };
         const place = {};
 
@@ -133,7 +155,7 @@ export default class PortalOrderFormRouteComponent extends Component {
     }
 
     @action openEditPlaceForm(field, place, index = null) {
-        if (!place) {
+        if (!place || this.isLinkedReturn || field !== this.editableField) {
             return;
         }
 

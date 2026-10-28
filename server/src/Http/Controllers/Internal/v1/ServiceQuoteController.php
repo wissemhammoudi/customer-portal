@@ -5,6 +5,7 @@ namespace Fleetbase\CustomerPortal\Http\Controllers\Internal\v1;
 use Fleetbase\CustomerPortal\Services\PortalAccountResolver;
 use Fleetbase\CustomerPortal\Services\PortalConfigService;
 use Fleetbase\CustomerPortal\Services\PortalOrderService;
+use Fleetbase\CustomerPortal\Services\PortalReturnService;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\ServiceQuoteController as FleetOpsServiceQuoteController;
 use Fleetbase\FleetOps\Http\Resources\v1\ServiceQuote as ServiceQuoteResource;
 use Fleetbase\FleetOps\Models\Place;
@@ -29,14 +30,22 @@ class ServiceQuoteController extends Controller
 
     public function preliminary(Request $request)
     {
+        return (new ServiceQuote())->getConnection()->transaction(fn () => $this->preliminaryInTransaction($request));
+    }
+
+    protected function preliminaryInTransaction(Request $request)
+    {
         $context = $this->accountResolver->resolve();
         $this->orderService->validateNewOrder($request, $context);
         DeliveryOptions::validateInput($request->all());
-        abort_if(($request->filled('order_config') || $request->filled('type')) && !$this->orderService->resolveOrderConfig($request), 422, 'The selected delivery workflow is invalid.');
+        $enabledConfigs = $this->portalConfig->enabledOrderConfigIds();
+        $config = $this->orderService->resolveOrderConfig($request, $enabledConfigs);
+        abort_if(!$config, 422, 'The selected transportation workflow is unavailable.');
+        abort_if(is_array($enabledConfigs) && !in_array($config->uuid, $enabledConfigs, true)
+            && !in_array($config->public_id, $enabledConfigs, true), 422, 'This delivery workflow is disabled.');
         $cod = PortalOrderService::codAttributes(DeliveryOptions::payloadInput($request->all()));
-        $fingerprint = $request->has('meta.delivery')
-            ? DeliveryOptions::fingerprint($request->all())
-            : null;
+        $fingerprint = DeliveryOptions::fingerprint($request->all());
+        $routeFingerprint = $this->orderService->resolvedRouteFingerprint($request->all(), $context);
         $payload = $this->portalPayload($request, $context);
         $payload = array_merge($payload, $cod);
 
@@ -44,18 +53,45 @@ class ServiceQuoteController extends Controller
             return response()->apiError('Pickup and dropoff or at least two waypoints are required.');
         }
 
+        // Never allow customer-supplied distance/time or integrated-vendor parameters to set the base fare.
+        $request->replace(Arr::except($request->all(), ['distance', 'time', 'facilitator', 'cod']));
+        if ($cod !== []) {
+            $request->merge(['cod' => true]);
+        }
         $request->merge([
             'payload'            => $payload,
             'service_type'       => $request->input('service_type'),
             'scheduled_at'       => $request->input('scheduled_at'),
             'currency'           => $request->input('currency'),
-            'cod'                => $request->input('cod'),
             'is_route_optimized' => $request->boolean('is_route_optimized', true),
             'single'             => $request->boolean('single', false),
         ]);
 
-        $quoteIds = $this->queryAllowedServiceQuotes($request);
+        $isReturn = $request->input('meta.delivery.purpose') === 'return';
+        $originalId = $request->input('meta.delivery.original_order_uuid');
+        $returns = new PortalReturnService();
+        if ($isReturn && $originalId) {
+            $original = $this->orderService->resolveOrder($originalId, $context);
+            $price = $returns->originalPrice($original);
+            $price['original_order_uuid'] = $original->uuid;
+            $quote = ServiceQuote::create([
+                'company_uuid' => session('company'), 'service_rate_uuid' => $price['service_rate_uuid'],
+                'amount' => $price['amount'], 'currency' => $price['currency'], 'expired_at' => now()->addMinutes(30),
+            ]);
+            $returns->applyPrice($quote, $price);
+            $quoteIds = [$quote->uuid];
+        } else {
+            $quoteIds = $this->queryAllowedServiceQuotes($request);
+            if ($isReturn) {
+                ServiceQuote::whereIn('uuid', $quoteIds)->get()->each(function ($quote) use ($returns) {
+                    $returns->applyPrice($quote, ['amount' => $quote->amount, 'currency' => $quote->currency]);
+                });
+            }
+        }
         $this->markQuotesForPortal($quoteIds, $context, $fingerprint);
+        ServiceQuote::whereIn('uuid', $quoteIds)->get()->each(function ($quote) use ($routeFingerprint) {
+            $quote->updateMeta('customer_portal.resolved_route_fingerprint', $routeFingerprint);
+        });
 
         $quotes = ServiceQuote::with(['items', 'serviceRate'])
             ->whereIn('uuid', $quoteIds)
@@ -76,20 +112,15 @@ class ServiceQuoteController extends Controller
             return [];
         }
 
-        if (!is_array($enabledServiceRateIds)) {
-            $request->merge(['service' => $request->input('service', 'all')]);
-
-            $response = $this->fleetOpsServiceQuotes->preliminaryQuery($request);
-            if ($response->getStatusCode() >= 400) {
-                abort($response->getStatusCode(), implode(' ', data_get($response->getData(true), 'errors', [])));
-            }
-
-            return $this->quoteIdsFromResponse($response->getData(true));
-        }
-
+        $config = $this->orderService->resolveOrderConfig($request, $this->portalConfig->enabledOrderConfigIds());
         $serviceRateUuids = ServiceRate::where('company_uuid', session('company'))
-            ->where(function ($query) use ($enabledServiceRateIds) {
-                $query->whereIn('uuid', $enabledServiceRateIds)->orWhereIn('public_id', $enabledServiceRateIds);
+            ->where(function ($query) use ($config) {
+                $query->whereNull('order_config_uuid')->orWhere('order_config_uuid', $config->uuid);
+            })
+            ->when(is_array($enabledServiceRateIds), function ($query) use ($enabledServiceRateIds) {
+                $query->where(function ($query) use ($enabledServiceRateIds) {
+                    $query->whereIn('uuid', $enabledServiceRateIds)->orWhereIn('public_id', $enabledServiceRateIds);
+                });
             })
             ->pluck('uuid')
             ->values()
@@ -118,6 +149,17 @@ class ServiceQuoteController extends Controller
 
         if (!$quote) {
             return response()->apiError('The service quote to purchase does not exist.');
+        }
+        abort_if($quote->expired_at && now()->greaterThanOrEqualTo($quote->expired_at), 422, 'This quote expired. Get a new quote.');
+        abort_if($this->orderService->queryForAccount($context)->where('meta->customer_portal->service_quote_uuid', $quote->uuid)->exists(),
+            409, 'This quote has already created a delivery.');
+        if (data_get($quote->meta, 'customer_portal_return_price')) {
+            $originalId = data_get($quote->meta, 'customer_portal_return_price.original_order_uuid');
+            $original = $originalId ? $this->orderService->resolveOrder($originalId, $context) : null;
+            if ($original) {
+                (new PortalReturnService())->assertEligible($original);
+            }
+            (new PortalReturnService())->assertQuotePrice($quote, $original);
         }
 
         $request->merge(['service_quote' => $quote->uuid]);

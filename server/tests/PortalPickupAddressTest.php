@@ -31,7 +31,12 @@ class PortalPickupAddressTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $container = new Container();
+        $container = new class extends Container {
+            public function abort($code, $message = '', array $headers = [])
+            {
+                throw new \Symfony\Component\HttpKernel\Exception\HttpException($code, $message, null, $headers);
+            }
+        };
         Container::setInstance($container);
         $container->instance(\Fleetbase\FleetOps\Models\Place::class, (new ReflectionClass(\Fleetbase\FleetOps\Models\Place::class))->newInstanceWithoutConstructor());
         $container->instance('config', new \Illuminate\Config\Repository([
@@ -44,6 +49,8 @@ class PortalPickupAddressTest extends TestCase
             public function json($data) { return new \Illuminate\Http\JsonResponse($data); }
         });
         $container->instance('validator', new Factory(new Translator(new ArrayLoader(), 'en'), $container));
+        $container->instance('cache', new \Illuminate\Cache\Repository(new \Illuminate\Cache\ArrayStore()));
+        $container->instance(\Illuminate\Contracts\Debug\ExceptionHandler::class, $this->createMock(\Illuminate\Contracts\Debug\ExceptionHandler::class));
         Facade::setFacadeApplication($container);
         Facade::clearResolvedInstances();
     }
@@ -147,7 +154,7 @@ class PortalPickupAddressTest extends TestCase
     public function testCustomerCatalogueOffersExpressWithoutChangingSharedAdminCatalogue(): void
     {
         $response = (new \Fleetbase\CustomerPortal\Http\Controllers\Internal\v1\DeliveryOptionsController())->index()->getData(true);
-        self::assertSame(['transportation'], array_column($response['purposes'], 'value'));
+        self::assertSame(['transportation', 'return'], array_column($response['purposes'], 'value'));
         self::assertSame(['standard', 'express'], array_column($response['service_levels'], 'value'));
         self::assertTrue($response['service_levels'][1]['available']);
         self::assertFalse(\Fleetbase\FleetOps\Support\DeliveryOptions::catalogue()['service_levels'][1]['available']);
@@ -246,7 +253,6 @@ class PortalPickupAddressTest extends TestCase
         foreach ([
             ['return' => ['street1' => 'Return']],
             ['payload' => ['waypoints' => [['street1' => 'Intermediate']]]],
-            ['meta' => ['delivery' => ['purpose' => 'return']]],
             ['meta' => ['delivery' => ['service_level' => 'overnight']]],
             ['meta' => ['delivery' => ['original_order_uuid' => 'historical-order']]],
         ] as $input) {
@@ -269,5 +275,195 @@ class PortalPickupAddressTest extends TestCase
                 self::assertArrayHasKey('scheduled_at', $exception->errors());
             }
         }
+
     }
+
+        public function testStandaloneReturnDefaultsToSavedAccountAddressWithoutChangingPickupPointer(): void
+        {
+            [$connection, $account] = $this->accountFixtures();
+            $this->spatialWrites($connection);
+            $context = ['account' => $account];
+            $saved = (new PortalPickupAddressService())->put([
+                'street1' => 'Warehouse', 'phone' => '123', 'latitude' => 36, 'longitude' => 10,
+            ], $context);
+            $request = new Request([
+                'meta' => ['delivery' => ['purpose' => 'return', 'service_level' => 'standard']],
+                'pickup' => ['street1' => 'Recipient', 'phone' => '456', 'latitude' => 37, 'longitude' => 11],
+            ]);
+            (new PortalOrderService())->validateNewOrder($request, $context);
+            self::assertSame($saved->uuid, $request->input('dropoff'));
+            self::assertSame($saved->uuid, data_get($account->fresh()->meta, 'customer_portal.pickup_address_uuid'));
+            self::assertArrayNotHasKey('cod_amount', $request->all());
+            $request->merge(['dropoff' => ['street1' => 'Different warehouse', 'phone' => '123', 'latitude' => 36, 'longitude' => 10]]);
+            $this->expectException(ValidationException::class);
+            (new PortalOrderService())->validateNewOrder($request, $context);
+        }
+
+        public function testReturnDiscountUsesIntegerMinorUnitsAndExplicitlyRejectsMissingAndZeroPrices(): void
+        {
+            $returns = new \Fleetbase\CustomerPortal\Services\PortalReturnService();
+            foreach ([1 => 1, 2 => 2, 3 => 2, 4 => 3, 5 => 4, 15000 => 12000, 15001 => 12001] as $base => $expected) {
+                self::assertSame($expected, $returns->discountedAmount($base));
+                self::assertSame($expected, $returns->discountedAmount((string) $base));
+            }
+            foreach ([null, 0, '0', -1, '12.5', 12.5, PHP_INT_MAX] as $base) {
+                try {
+                    $returns->discountedAmount($base);
+                    self::fail('An invalid return price was accepted.');
+                } catch (ValidationException $exception) {
+                    self::assertArrayHasKey('return_price', $exception->errors());
+                }
+            }
+        }
+
+    public function testReturnQuoteAmountItemsAndCurrencyStayConsistentAndRejectTampering(): void
+    {
+        [$connection] = $this->accountFixtures();
+        $connection->getSchemaBuilder()->create('service_quotes', function ($table) {
+            $table->string('uuid')->primary();
+            $table->integer('amount');
+            $table->string('currency');
+            $table->text('meta')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+        $connection->getSchemaBuilder()->create('service_quote_items', function ($table) {
+            $table->increments('id');
+            $table->string('uuid')->nullable();
+            $table->string('service_quote_uuid');
+            $table->integer('amount');
+            $table->string('currency');
+            $table->string('details')->nullable();
+            $table->string('code')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+        $connection->table('service_quotes')->insert(['uuid' => 'return-quote', 'amount' => 15001, 'currency' => 'TND']);
+        $quote = \Fleetbase\FleetOps\Models\ServiceQuote::withoutGlobalScopes()->findOrFail('return-quote');
+        $returns = new \Fleetbase\CustomerPortal\Services\PortalReturnService();
+        $returns->applyPrice($quote, ['amount' => 15001, 'currency' => 'TND']);
+        self::assertSame(12001, (int) $quote->amount);
+        self::assertLessThan(15001, (int) $quote->amount);
+        self::assertSame(12001, (int) $quote->items()->sum('amount'));
+        self::assertSame('TND', $quote->items()->first()->currency);
+        $returns->assertQuotePrice($quote, null);
+        $quote->amount = 15001;
+        try {
+            $returns->assertQuotePrice($quote, null);
+            self::fail('An undiscounted return quote was accepted.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+            self::assertSame(422, $exception->getStatusCode());
+        }
+        foreach ([1, 2] as $base) {
+            try {
+                $returns->applyPrice($quote, ['amount' => $base, 'currency' => 'TND']);
+                self::fail('A return fee equal to the original fee was accepted.');
+            } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+                self::assertSame(422, $exception->getStatusCode());
+            }
+        }
+    }
+
+        protected function returnOriginal(string $status = 'created'): \Fleetbase\FleetOps\Models\Order
+        {
+            $place = function ($uuid, $street, $phone, $lat, $lng) {
+                return (new \Fleetbase\FleetOps\Models\Place())->forceFill([
+                    'uuid' => $uuid, 'street1' => $street, 'phone' => $phone,
+                    'location' => new \Fleetbase\LaravelMysqlSpatial\Types\Point($lat, $lng),
+                ]);
+            };
+            $payload = (new \Fleetbase\FleetOps\Models\Payload())
+                ->setRelation('pickup', $place('original-pickup', 'Warehouse', '123', 36, 10))
+                ->setRelation('dropoff', $place('original-dropoff', 'Recipient', '456', 37, 11))
+                ->setRelation('waypointMarkers', collect());
+            $quote = (new \Fleetbase\FleetOps\Models\ServiceQuote())->forceFill(['amount' => 15001, 'currency' => 'TND']);
+            $rate = (new \Fleetbase\FleetOps\Models\PurchaseRate())->setRelation('serviceQuote', $quote);
+
+            return (new \Fleetbase\FleetOps\Models\Order())->setRawAttributes(['uuid' => 'original', 'status' => $status])
+                ->setRelation('payload', $payload)->setRelation('purchaseRate', $rate)->setRelation('transaction', null);
+        }
+
+        public function testLinkedReturnAcceptsEveryNoncancelledStatusAndRequiresExactHistoricalReverseRoute(): void
+        {
+            $returns = new \Fleetbase\CustomerPortal\Services\PortalReturnService();
+            foreach (['created', 'pending', 'dispatched', 'started', 'completed', 'delivered'] as $status) {
+                $original = $this->returnOriginal($status);
+                $returns->assertReversedRoute($original, clone $original->payload->dropoff, clone $original->payload->pickup);
+                self::assertSame(15001, $returns->originalPrice($original)['amount']);
+            }
+            foreach (['cancelled', 'canceled', 'order_canceled', 'order_cancelled', 'CANCELLED'] as $status) {
+                try {
+                    $returns->assertEligible($this->returnOriginal($status));
+                    self::fail('A cancelled original was accepted.');
+                } catch (ValidationException $exception) {
+                    self::assertArrayHasKey('meta.delivery.original_order_uuid', $exception->errors());
+                }
+            }
+            $original = $this->returnOriginal();
+            foreach (['street1' => 'Forged', 'phone' => '000', 'location' => new \Fleetbase\LaravelMysqlSpatial\Types\Point(38, 12)] as $field => $value) {
+                $pickup = clone $original->payload->dropoff;
+                $pickup->{$field} = $value;
+                try {
+                    $returns->assertReversedRoute($original, $pickup, $original->payload->pickup);
+                    self::fail('A modified reverse route was accepted.');
+                } catch (ValidationException $exception) {
+                    self::assertArrayHasKey('pickup', $exception->errors());
+                }
+            }
+        }
+
+    public function testRoadProviderRequestsDrivingGeoJsonAndPreservesCurvedGeometry(): void
+    {
+        $http = new \Illuminate\Http\Client\Factory();
+        Container::getInstance()->instance('http', $http);
+        \Illuminate\Support\Facades\Http::swap($http);
+        $geometry = [[10, 36], [10.1, 36.2], [10.5, 36.8], [11, 37]];
+        $http->fake(['routes.googleapis.com/*' => $http->response(['routes' => [[
+            'distanceMeters' => 12000, 'duration' => '600s',
+            'polyline' => ['geoJsonLinestring' => ['type' => 'LineString', 'coordinates' => $geometry]],
+        ]]])]);
+        $provider = new class extends \Fleetbase\FleetOps\Tracking\Providers\GoogleRoutesTrackingProvider {
+            protected function apiKey(): ?string { return 'test-routing-key'; }
+        };
+        $result = $provider->preview([
+            new \Fleetbase\LaravelMysqlSpatial\Types\Point(36, 10),
+            new \Fleetbase\LaravelMysqlSpatial\Types\Point(37, 11),
+        ]);
+        self::assertSame($geometry, $result->coordinates);
+        self::assertSame(12000.0, $result->distanceMeters);
+        $http->assertSent(fn ($request) => $request['travelMode'] === 'DRIVE'
+            && $request['polylineEncoding'] === 'GEO_JSON_LINESTRING'
+            && $request['origin']['location']['latLng']['latitude'] === 36.0
+            && $request['destination']['location']['latLng']['longitude'] === 11.0);
+    }
+
+        public function testRoadPreviewAcceptsCoordinatesWithoutParcelOrQuoteAndNeverFallsBack(): void
+        {
+            Request::macro('validate', function ($rules) {
+                return \Illuminate\Support\Facades\Validator::make($this->all(), $rules)->validate();
+            });
+            $routing = $this->createMock(\Fleetbase\FleetOps\Tracking\Providers\GoogleRoutesTrackingProvider::class);
+            $routing->expects(self::once())->method('preview')->with(self::callback(function ($points) {
+                return count($points) === 3 && $points[0]->getLat() === 36.0 && $points[1]->getLng() === 10.5;
+            }))->willReturn(new \Fleetbase\FleetOps\Tracking\TrackingProviderResult(
+                provider: 'google_routes', coordinates: [[10, 36], [10.5, 36.5], [11, 37]]
+            ));
+            $service = new \Fleetbase\CustomerPortal\Services\PortalRoutePreviewService(new PortalOrderService(), $routing);
+            $request = new Request([
+                'pickup' => ['latitude' => 36, 'longitude' => 10],
+                'dropoff' => ['latitude' => 37, 'longitude' => 11],
+                'waypoints' => [['latitude' => 36.5, 'longitude' => 10.5]],
+            ]);
+            $result = $service->preview($request, ['account' => (object) ['uuid' => 'account-1']]);
+            self::assertSame([[10, 36], [10.5, 36.5], [11, 37]], $result['route']['geometry']['coordinates']);
+            self::assertSame($result, $service->preview($request, ['account' => (object) ['uuid' => 'account-1']]));
+            $routing = $this->createMock(\Fleetbase\FleetOps\Tracking\Providers\GoogleRoutesTrackingProvider::class);
+            $routing->method('preview')->willThrowException(new \RuntimeException('Provider unavailable'));
+            try {
+                (new \Fleetbase\CustomerPortal\Services\PortalRoutePreviewService(new PortalOrderService(), $routing))->preview($request, []);
+                self::fail('Routing failure silently fell back.');
+            } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+                self::assertSame(503, $exception->getStatusCode());
+            }
+        }
 }

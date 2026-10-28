@@ -18,7 +18,7 @@
             {{/if}}
             {{#if this.draft.pickupChanged}}
                 <InfoBlock
-                    @text="Your account pickup address changed since this draft was saved. Confirm using the current Profile/Settings pickup address; previous rates will be discarded."
+                    @text="Your account pickup address changed since this draft was saved. Confirm using the current Profile/Settings address as the delivery pickup or return dropoff; previous rates will be discarded."
                 />
                 <Button @text="Use current account pickup" @onClick={{this.customerPortalOrderCreation.acknowledgePickupChange}} />
             {{/if}}

@@ -80,6 +80,7 @@ Route::prefix(config('customer-portal.api.routing.prefix', 'customer-portal'))->
                                 $router->delete('places/{id}', 'PlaceController@delete');
                                 $router->get('orders', 'OrderController@orders');
                                 $router->post('orders', 'OrderController@createOrder');
+                                $router->post('orders/route-preview', 'OrderController@routePreview')->middleware(Fleetbase\Http\Middleware\ThrottleRequests::class);
                                 $router->get('orders/summary', 'OrderController@orderSummary');
                                 $router->get('orders/{id}', 'OrderController@order');
                                 $router->post('orders/{id}/cancel', 'OrderController@cancelOrder');

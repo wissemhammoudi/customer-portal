@@ -172,6 +172,7 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
     serializeQuoteRequest(draft = {}) {
         return {
             meta: draft.meta,
+            return_addresses_confirmed: draft.returnAddressesConfirmed,
             order_config: draft.orderConfig?.id ?? draft.orderConfig?.public_id ?? draft.orderConfig?.uuid,
             payload: {
                 pickup: this.serializePlace(draft.payload?.pickup),

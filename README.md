@@ -46,12 +46,27 @@ production activation or Express release.
 
 ### Customer delivery policy and shared pickup API
 
-New customer deliveries are transportation only, with one account pickup and one
-dropoff. Returns, return-to-pickup and intermediate/multiple stops remain readable
-on historical orders but cannot be submitted as new deliveries. Unsupported saved
-checkout drafts remain intact and show an explicit blocking explanation. A draft
-whose pickup differs from the current account pickup requires acknowledgement
-before replacing it and discarding old rates.
+Customer deliveries support Transportation or Return, with one pickup and one
+dropoff (no intermediate/multiple stops or extra return-to-pickup stop).
+Transportation uses the current saved account pickup. A standalone Return uses
+the current account address as its validated dropoff (defaulted when omitted).
+A linked Return supplies `meta.delivery.original_order_uuid`; the original must
+belong to an authorized customer account and must not be cancelled. Its original
+dropoff becomes the return pickup and its original pickup becomes the return
+dropoff; the server checks street, phone and coordinates against those historical
+endpoints. Parcels are supplied explicitly, and COD is never copied automatically.
+Active linked returns are unique under an original-order transaction lock.
+Identical quote/draft retries return the existing order; changed retries conflict.
+
+Return pricing is calculated server-side: 80% of the original delivery fee for a
+linked return, or 80% of the equivalent transportation quote for a standalone
+return. Prices use integer minor units rounded half up; missing/zero original
+prices are explicit errors. Discounted quote items, checkout and order fees must
+agree. Quotes are account scoped and fingerprint the delivery contract; changed
+addresses, parcels, service options or COD require a fresh quote. Only the
+Transportation workflow is exposed; Storefront configurations are not selectable.
+Returns remain direct operational deliveries, not transportation-only collection
+workflow enrollments. Checkout drafts can retain return contracts.
 
 The schedule date/time field is always visible, optional until chosen, and must
 be a valid future timestamp when provided. Standard and Express are the only
@@ -62,6 +77,17 @@ silently price it as Standard or change dispatcher/admin behavior.
 Both app and web use the authenticated `customer-portal/int/v1` namespace:
 
 - `GET account/pickup-address` returns `{"place": Place|null}`.
+- `POST orders/route-preview` accepts `{pickup, dropoff, waypoints?: []}` independently
+  of parcels, classification, quotes or an existing order. Each stop can be a
+  coordinate object (`latitude`, `longitude`), GeoJSON-backed Place, or scoped
+  saved/historical account-order place identifier. Ordered waypoints (maximum 23)
+  are preview-only; they do not enable multistop order creation.
+  Success returns `{route:{geometry:{type:"LineString",coordinates:[[longitude,latitude],...]},
+  distance_m,duration_s,provider}}`. Invalid input is HTTP 422; unavailable server
+  Google Routes credentials, provider failures or missing road geometry are HTTP
+  503. There is no straight-line fallback, and no server credential is returned.
+  Tracker geometry is marked with `geometry_source`; calculated estimates never
+  expose road geometry. All endpoints require the protected customer account session.
 - `PUT account/pickup-address` accepts an **unwrapped** Place address object
   (`street1` or `address`, `phone`, `latitude`, `longitude`, optional `name`,
   `street2`, `city`, `province`, `postal_code`, `country`, `neighborhood`,
