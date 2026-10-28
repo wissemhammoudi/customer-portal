@@ -28,7 +28,7 @@
                             {{/if}}
                         </td>
                         <td>{{place-address place showTitle=false}}</td>
-                        <td>{{n-a place.phone}}</td>
+                        <td>{{#each place.phones as |phone|}}<div>{{phone}}</div>{{else}}{{n-a place.phone}}{{/each}}</td>
                         <td>
                             <div class="flex items-center justify-end space-x-2">
                                 <Button @icon="pencil" @size="xs" @onClick={{fn this.editPlace place}} @helpText="Edit place" />

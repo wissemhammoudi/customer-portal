@@ -9,6 +9,38 @@ export default class ModalsPortalOrderPlaceFormComponent extends Component {
 
     @tracked coordinatesInput;
     @tracked lookupResults = [];
+    @tracked phones = this.initialPhones();
+
+    initialPhones() {
+        const place = this.args.options?.place ?? {};
+        const list = Array.isArray(place.phones) && place.phones.length ? place.phones : [place.phone ?? ''];
+        return list.length ? [...list] : [''];
+    }
+
+    syncPhones(phones) {
+        this.phones = phones;
+        const clean = phones.map((value) => String(value ?? '').trim()).filter(Boolean);
+        this.place.phones = clean;
+        this.place.phone = clean[0] ?? '';
+        this.place.primary_phone = clean[0] ?? '';
+    }
+
+    @action setPhone(index, value) {
+        this.syncPhones(this.phones.map((item, i) => (i === index ? value : item)));
+    }
+
+    @action addPhone() {
+        this.phones = [...this.phones, ''];
+    }
+
+    @action removePhone(index) {
+        const next = this.phones.filter((_, i) => i !== index);
+        this.syncPhones(next.length ? next : ['']);
+    }
+
+    @action makePrimary(index) {
+        this.syncPhones([this.phones[index], ...this.phones.filter((_, i) => i !== index)]);
+    }
 
     get place() {
         const place = this.args.options.place;

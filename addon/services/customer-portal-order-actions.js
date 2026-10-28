@@ -226,6 +226,8 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
             country: valueFor(place, 'country'),
             country_name: valueFor(place, 'country_name'),
             phone: valueFor(place, 'phone'),
+            phones: valueFor(place, 'phones'),
+            primary_phone: valueFor(place, 'primary_phone'),
             location: valueFor(place, 'location'),
             latitude: valueFor(place, 'latitude'),
             longitude: valueFor(place, 'longitude'),

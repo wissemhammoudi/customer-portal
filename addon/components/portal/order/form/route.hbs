@@ -3,13 +3,13 @@
         <InputGroup @name="Return pickup (original dropoff)" @required={{true}}>
             <div class="form-input">
                 {{place-address @draft.payload.pickup}}
-                <div>{{@draft.payload.pickup.phone}}</div>
+                {{#each @draft.payload.pickup.phones as |phone|}}<div>{{phone}}</div>{{else}}<div>{{@draft.payload.pickup.phone}}</div>{{/each}}
             </div>
         </InputGroup>
         <InputGroup @name="Return dropoff (original pickup)" @required={{true}}>
             <div class="form-input">
                 {{place-address @draft.payload.dropoff}}
-                <div>{{@draft.payload.dropoff.phone}}</div>
+                {{#each @draft.payload.dropoff.phones as |phone|}}<div>{{phone}}</div>{{else}}<div>{{@draft.payload.dropoff.phone}}</div>{{/each}}
             </div>
         </InputGroup>
         <p>This route reverses the original order's saved addresses, even if your account pickup has changed.</p>
@@ -22,7 +22,7 @@
             {{#if this.fixedPlace}}
                 <div class="form-input">
                     {{place-address this.fixedPlace}}
-                    <div>{{this.fixedPlace.phone}}</div>
+                    {{#each this.fixedPlace.phones as |phone|}}<div>{{phone}}</div>{{else}}<div>{{this.fixedPlace.phone}}</div>{{/each}}
                 </div>
             {{/if}}
             <p>This address is shared by everyone on your seller account. Edit it only in Profile/Settings.</p>

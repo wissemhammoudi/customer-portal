@@ -1,6 +1,10 @@
 import { valueFor } from './model-access';
 
 export function hasPhone(place) {
+    const phones = valueFor(place, 'phones');
+    if (Array.isArray(phones) && phones.some((value) => typeof value === 'string' && value.trim())) {
+        return true;
+    }
     const phone = valueFor(place, 'phone');
     return typeof phone === 'string' && phone.trim().length > 0;
 }

@@ -42,9 +42,20 @@
                 <ModelCoordinatesInput @model={{this.place}} @autocomplete="all" @onInputReady={{fn (mut this.coordinatesInput)}} />
             </InputGroup>
 
-            <InputGroup @name="Phone" @required={{true}} @helpText="Required for pickup and dropoff." @wrapperClass="col-span-2">
-                <PhoneInput @value={{this.place.phone}} @autocomplete="nope" @onInput={{fn (mut this.place.phone)}} class="form-input w-full" />
-            </InputGroup>
+            <div class="col-span-3 space-y-2">
+                {{#each this.phones as |phone index|}}
+                    <InputGroup @name={{if (eq index 0) "Phone (primary)" "Additional phone"}} @required={{eq index 0}} @helpText={{if (eq index 0) "At least one phone is required for pickup and dropoff."}}>
+                        <div class="flex items-center space-x-2">
+                            <PhoneInput @value={{phone}} @autocomplete="nope" @onInput={{fn this.setPhone index}} class="form-input w-full" />
+                            {{#if index}}
+                                <button type="button" class="btn btn-default btn-xs" {{on "click" (fn this.makePrimary index)}}>Primary</button>
+                            {{/if}}
+                            <button type="button" class="btn btn-default btn-xs" {{on "click" (fn this.removePhone index)}}>Remove</button>
+                        </div>
+                    </InputGroup>
+                {{/each}}
+                <button type="button" class="btn btn-default btn-xs" {{on "click" this.addPhone}}>Add another phone</button>
+            </div>
         </div>
     </div>
 </Modal::Default>

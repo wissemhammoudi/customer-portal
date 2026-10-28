@@ -4,7 +4,7 @@
         <p>One pickup address shared by all members of your seller account on app and web. Street address, coordinates and contact phone are required.</p>
         {{#if this.pickupAddress}}
             <div>{{place-address this.pickupAddress}}</div>
-            <div>{{this.pickupAddress.phone}}</div>
+            <div>{{#each this.pickupAddress.phones as |phone|}}<div>{{phone}}</div>{{else}}{{this.pickupAddress.phone}}{{/each}}</div>
         {{else}}
             <p>No pickup address saved. New deliveries cannot be quoted or created.</p>
         {{/if}}
