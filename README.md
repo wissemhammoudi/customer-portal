@@ -92,8 +92,8 @@ workflow enrollments. Checkout drafts can retain return contracts.
 
 The schedule date/time field is always visible, optional until chosen, and must
 be a valid future timestamp when provided. Standard and Express are the only
-customer service choices. Express adds **4.000 TND (4000 millimes)** to a TND
-delivery quote before the 20% return discount. Non-TND Express quotes are rejected.
+customer service choices. Express is **1.5x** the delivery fee (rounded to 0.5 TND) on a TND
+delivery quote, before the 40% return discount. The standard fee is flat by total parcel volume (up to 30,000 cm3: 8 TND; 60,000: 10; 120,000: 15; above: 20) and is the only fee line shown. Non-TND Express quotes are rejected.
 Linked returns remove the verified original Express surcharge before pricing the
 selected service level, avoiding double charging. The portal does not
 silently price it as Standard or change dispatcher/admin behavior.

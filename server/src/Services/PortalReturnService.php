@@ -10,6 +10,9 @@ use Illuminate\Validation\ValidationException;
 class PortalReturnService
 {
     public const CANCELLED_STATUSES = ['cancelled', 'canceled', 'order_canceled', 'order_cancelled'];
+    public const DISCOUNT_PERCENT = 40;
+    // Customer pays 60% of the delivery fee; expressed in tenths (x6 / 10) for integer maths.
+    public const PAYABLE_PERCENT = 60;
 
     public function assertEligible(Order $original): void
     {
@@ -54,41 +57,45 @@ class PortalReturnService
         }
 
         $amount = (int) $amount;
+        $standardAmount = $amount;
         if (data_get($original->meta, 'delivery.service_level') === 'express') {
             abort_unless($quote, 422, 'The original Express delivery has no verifiable quote. Contact support.');
             (new PortalExpressService())->assertQuotePrice($quote, 'express');
-            $surcharge = data_get($quote->meta, 'customer_portal_return_price') !== null
-                ? $this->discountedAmount(PortalExpressService::SURCHARGE) : PortalExpressService::SURCHARGE;
-            $amount -= $surcharge;
-            $this->discountedAmount($amount);
+            // Back out the Express multiplier: the verified standard base is stored with the quote.
+            $standardAmount = (int) data_get($quote->meta, 'customer_portal_express_price.base_amount');
+            if (data_get($quote->meta, 'customer_portal_return_price') !== null) {
+                $standardAmount = $this->discountedAmount($standardAmount);
+            }
+            $this->discountedAmount($standardAmount);
         }
+        $amount = $standardAmount;
         if ($serviceLevel === 'express') {
-            $amount = (new PortalExpressService())->addSurcharge($amount, $currency);
+            $amount = (new PortalExpressService())->expressAmount($standardAmount, $currency);
         }
 
-        return ['amount' => $amount, 'currency' => $currency, 'service_rate_uuid' => $quote?->service_rate_uuid,
-            'service_level' => $serviceLevel];
+        return ['amount' => $amount, 'standard_amount' => $standardAmount, 'currency' => $currency,
+            'service_rate_uuid' => $quote?->service_rate_uuid, 'service_level' => $serviceLevel];
     }
 
     public function discountedAmount($amount): int
     {
         // Integer minor units, rounded half up, without floating-point multiplication.
-        if ((!is_int($amount) && !(is_string($amount) && ctype_digit($amount))) || $amount <= 0 || $amount > intdiv(PHP_INT_MAX - 5, 8)) {
+        if ((!is_int($amount) && !(is_string($amount) && ctype_digit($amount))) || $amount <= 0 || $amount > intdiv(PHP_INT_MAX - 5, self::PAYABLE_PERCENT / 10)) {
             throw ValidationException::withMessages(['return_price' => 'A positive delivery fee in integer minor units is required to price this return. Contact support if the original price is missing or zero.']);
         }
 
-        return intdiv((int) $amount * 8 + 5, 10);
+        return intdiv((int) $amount * (self::PAYABLE_PERCENT / 10) + 5, 10);
     }
 
     public function applyPrice(ServiceQuote $quote, array $price): void
     {
         $amount = $this->discountedAmount($price['amount']);
-        abort_if($amount < 1 || $amount >= (int) $price['amount'], 422, 'The original fee is too small to apply a 20% return discount in minor units.');
+        abort_if($amount < 1 || $amount >= (int) $price['amount'], 422, 'The original fee is too small to apply the ' . self::DISCOUNT_PERCENT . '% return discount in minor units.');
         $quote->update(['amount' => $amount, 'currency' => $price['currency']]);
         $quote->items()->delete();
         $quote->items()->create([
             'amount' => $amount, 'currency' => $price['currency'],
-            'details' => 'Return delivery (20% discount)', 'code' => 'return_delivery_fee',
+            'details' => 'Return delivery (' . self::DISCOUNT_PERCENT . '% discount)', 'code' => 'return_delivery_fee',
         ]);
         $quote->updateMeta('customer_portal_return_price', [
             'base_amount' => (int) $price['amount'], 'amount' => $amount, 'currency' => $price['currency'],

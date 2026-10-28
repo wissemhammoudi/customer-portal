@@ -6,29 +6,31 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 
 class PortalExpressService
 {
-    public const SURCHARGE = 4000;
+    // Express costs 1.5x the standard delivery fee, rounded half up to 0.5 TND.
+    public const MULTIPLIER = '1.5';
+    public const ROUNDING = 500;
     public const CURRENCY = 'TND';
 
-    public function addSurcharge(int $amount, string $currency): int
+    public function expressAmount(int $base, string $currency): int
     {
         abort_if($currency !== self::CURRENCY, 422, 'Express delivery is only priced in TND. Select a TND delivery rate.');
-        abort_if($amount < 1 || $amount > PHP_INT_MAX - self::SURCHARGE, 422, 'A valid delivery fee is required for Express.');
+        abort_if($base < 1 || $base > intdiv(PHP_INT_MAX - 1000, 3), 422, 'A valid delivery fee is required for Express.');
 
-        return $amount + self::SURCHARGE;
+        return intdiv($base * 3 + self::ROUNDING, 2 * self::ROUNDING) * self::ROUNDING;
     }
 
     public function applyPrice(ServiceQuote $quote): void
     {
         abort_if(data_get($quote->meta, 'customer_portal_express_price') !== null, 422, 'Get a fresh Express quote.');
         $base = (int) $quote->amount;
-        $amount = $this->addSurcharge($base, $quote->currency);
+        $amount = $this->expressAmount($base, (string) $quote->currency);
         $quote->update(['amount' => $amount]);
+        $quote->items()->delete();
         $quote->items()->create([
-            'amount' => self::SURCHARGE, 'currency' => self::CURRENCY,
-            'details' => 'Express delivery surcharge', 'code' => 'express_surcharge',
+            'amount' => $amount, 'currency' => self::CURRENCY, 'details' => 'Express delivery fee', 'code' => 'delivery_fee',
         ]);
         $quote->updateMeta('customer_portal_express_price', [
-            'base_amount' => $base, 'amount' => $amount, 'surcharge' => self::SURCHARGE, 'currency' => self::CURRENCY,
+            'base_amount' => $base, 'amount' => $amount, 'multiplier' => self::MULTIPLIER, 'currency' => self::CURRENCY,
         ]);
     }
 
@@ -40,9 +42,9 @@ class PortalExpressService
             return;
         }
         abort_unless(is_array($price), 422, 'Get a current Express delivery quote.');
-        $amount = $this->addSurcharge((int) ($price['base_amount'] ?? 0), (string) ($price['currency'] ?? ''));
-        abort_if(($price['surcharge'] ?? null) !== self::SURCHARGE || ($price['amount'] ?? null) !== $amount,
-            422, 'The Express surcharge changed. Get a new quote.');
+        $amount = $this->expressAmount((int) ($price['base_amount'] ?? 0), (string) ($price['currency'] ?? ''));
+        abort_if(($price['multiplier'] ?? null) !== self::MULTIPLIER || ($price['amount'] ?? null) !== $amount,
+            422, 'The Express fee changed. Get a new quote.');
         if (data_get($quote->meta, 'customer_portal_return_price') !== null) {
             abort_if((int) data_get($quote->meta, 'customer_portal_return_price.base_amount') !== $amount,
                 422, 'The Express return quote is inconsistent. Get a new quote.');

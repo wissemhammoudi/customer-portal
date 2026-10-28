@@ -17,7 +17,7 @@ class DeliveryOptionsController extends Controller
         $catalogue['service_levels'] = [
             ['value' => 'standard', 'label' => 'Standard', 'available' => true],
             ['value' => 'express', 'label' => 'Express', 'available' => true,
-                'description' => 'Priority handling with a 4.000 TND surcharge before any return discount.'],
+                'description' => 'Priority handling at 1.5x the standard delivery fee, before any return discount.'],
         ];
 
         return response()->json($catalogue);

@@ -302,7 +302,7 @@ class PortalPickupAddressTest extends TestCase
         public function testReturnDiscountUsesIntegerMinorUnitsAndExplicitlyRejectsMissingAndZeroPrices(): void
         {
             $returns = new \Fleetbase\CustomerPortal\Services\PortalReturnService();
-            foreach ([1 => 1, 2 => 2, 3 => 2, 4 => 3, 5 => 4, 15000 => 12000, 15001 => 12001] as $base => $expected) {
+            foreach ([1 => 1, 2 => 1, 3 => 2, 4 => 2, 5 => 3, 15000 => 9000, 15001 => 9001] as $base => $expected) {
                 self::assertSame($expected, $returns->discountedAmount($base));
                 self::assertSame($expected, $returns->discountedAmount((string) $base));
             }
@@ -342,9 +342,9 @@ class PortalPickupAddressTest extends TestCase
         $quote = \Fleetbase\FleetOps\Models\ServiceQuote::withoutGlobalScopes()->findOrFail('return-quote');
         $returns = new \Fleetbase\CustomerPortal\Services\PortalReturnService();
         $returns->applyPrice($quote, ['amount' => 15001, 'currency' => 'TND']);
-        self::assertSame(12001, (int) $quote->amount);
+        self::assertSame(9001, (int) $quote->amount);
         self::assertLessThan(15001, (int) $quote->amount);
-        self::assertSame(12001, (int) $quote->items()->sum('amount'));
+        self::assertSame(9001, (int) $quote->items()->sum('amount'));
         self::assertSame('TND', $quote->items()->first()->currency);
         $returns->assertQuotePrice($quote, null);
         $quote->amount = 15001;
@@ -354,7 +354,7 @@ class PortalPickupAddressTest extends TestCase
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
             self::assertSame(422, $exception->getStatusCode());
         }
-        foreach ([1, 2] as $base) {
+        foreach ([1] as $base) {
             try {
                 $returns->applyPrice($quote, ['amount' => $base, 'currency' => 'TND']);
                 self::fail('A return fee equal to the original fee was accepted.');

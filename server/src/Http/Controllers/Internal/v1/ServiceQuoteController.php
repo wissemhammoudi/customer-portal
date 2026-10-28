@@ -4,6 +4,7 @@ namespace Fleetbase\CustomerPortal\Http\Controllers\Internal\v1;
 
 use Fleetbase\CustomerPortal\Services\PortalAccountResolver;
 use Fleetbase\CustomerPortal\Services\PortalConfigService;
+use Fleetbase\CustomerPortal\Services\PortalDeliveryFeeService;
 use Fleetbase\CustomerPortal\Services\PortalOrderService;
 use Fleetbase\CustomerPortal\Services\PortalReturnService;
 use Fleetbase\CustomerPortal\Services\PortalExpressService;
@@ -79,7 +80,7 @@ class ServiceQuoteController extends Controller
             $price['original_order_uuid'] = $original->uuid;
             $quote = ServiceQuote::create([
                 'company_uuid' => session('company'), 'service_rate_uuid' => $price['service_rate_uuid'],
-                'amount' => $price['amount'] - ($serviceLevel === 'express' ? PortalExpressService::SURCHARGE : 0),
+                'amount' => $price['standard_amount'],
                 'currency' => $price['currency'], 'expired_at' => now()->addMinutes(30),
             ]);
             if ($serviceLevel === 'express') {
@@ -89,6 +90,10 @@ class ServiceQuoteController extends Controller
             $quoteIds = [$quote->uuid];
         } else {
             $quoteIds = $this->queryAllowedServiceQuotes($request);
+            // One flat delivery fee by parcel volume; keep a single quote and drop the rest.
+            $quoteIds = array_slice($quoteIds, 0, 1);
+            $fees = new PortalDeliveryFeeService();
+            ServiceQuote::whereIn('uuid', $quoteIds)->get()->each(fn ($quote) => $fees->applyStandardFee($quote, $payload['entities'] ?? []));
             if ($serviceLevel === 'express') {
                 ServiceQuote::whereIn('uuid', $quoteIds)->get()->each(fn ($quote) => $express->applyPrice($quote));
             }
