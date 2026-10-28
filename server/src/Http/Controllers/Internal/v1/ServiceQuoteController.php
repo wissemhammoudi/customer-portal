@@ -6,6 +6,7 @@ use Fleetbase\CustomerPortal\Services\PortalAccountResolver;
 use Fleetbase\CustomerPortal\Services\PortalConfigService;
 use Fleetbase\CustomerPortal\Services\PortalOrderService;
 use Fleetbase\CustomerPortal\Services\PortalReturnService;
+use Fleetbase\CustomerPortal\Services\PortalExpressService;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\ServiceQuoteController as FleetOpsServiceQuoteController;
 use Fleetbase\FleetOps\Http\Resources\v1\ServiceQuote as ServiceQuoteResource;
 use Fleetbase\FleetOps\Models\Place;
@@ -70,27 +71,37 @@ class ServiceQuoteController extends Controller
         $isReturn = $request->input('meta.delivery.purpose') === 'return';
         $originalId = $request->input('meta.delivery.original_order_uuid');
         $returns = new PortalReturnService();
+        $express = new PortalExpressService();
+        $serviceLevel = $request->input('meta.delivery.service_level', 'standard');
         if ($isReturn && $originalId) {
             $original = $this->orderService->resolveOrder($originalId, $context);
-            $price = $returns->originalPrice($original);
+            $price = $returns->originalPrice($original, $serviceLevel);
             $price['original_order_uuid'] = $original->uuid;
             $quote = ServiceQuote::create([
                 'company_uuid' => session('company'), 'service_rate_uuid' => $price['service_rate_uuid'],
-                'amount' => $price['amount'], 'currency' => $price['currency'], 'expired_at' => now()->addMinutes(30),
+                'amount' => $price['amount'] - ($serviceLevel === 'express' ? PortalExpressService::SURCHARGE : 0),
+                'currency' => $price['currency'], 'expired_at' => now()->addMinutes(30),
             ]);
+            if ($serviceLevel === 'express') {
+                $express->applyPrice($quote);
+            }
             $returns->applyPrice($quote, $price);
             $quoteIds = [$quote->uuid];
         } else {
             $quoteIds = $this->queryAllowedServiceQuotes($request);
+            if ($serviceLevel === 'express') {
+                ServiceQuote::whereIn('uuid', $quoteIds)->get()->each(fn ($quote) => $express->applyPrice($quote));
+            }
             if ($isReturn) {
-                ServiceQuote::whereIn('uuid', $quoteIds)->get()->each(function ($quote) use ($returns) {
-                    $returns->applyPrice($quote, ['amount' => $quote->amount, 'currency' => $quote->currency]);
+                ServiceQuote::whereIn('uuid', $quoteIds)->get()->each(function ($quote) use ($returns, $serviceLevel) {
+                    $returns->applyPrice($quote, ['amount' => $quote->amount, 'currency' => $quote->currency, 'service_level' => $serviceLevel]);
                 });
             }
         }
         $this->markQuotesForPortal($quoteIds, $context, $fingerprint);
-        ServiceQuote::whereIn('uuid', $quoteIds)->get()->each(function ($quote) use ($routeFingerprint) {
+        ServiceQuote::whereIn('uuid', $quoteIds)->get()->each(function ($quote) use ($routeFingerprint, $serviceLevel) {
             $quote->updateMeta('customer_portal.resolved_route_fingerprint', $routeFingerprint);
+            $quote->updateMeta('customer_portal.service_level', $serviceLevel);
         });
 
         $quotes = ServiceQuote::with(['items', 'serviceRate'])
@@ -150,6 +161,7 @@ class ServiceQuoteController extends Controller
         if (!$quote) {
             return response()->apiError('The service quote to purchase does not exist.');
         }
+        (new PortalExpressService())->assertQuotePrice($quote, data_get($quote->meta, 'customer_portal.service_level', 'standard'));
         abort_if($quote->expired_at && now()->greaterThanOrEqualTo($quote->expired_at), 422, 'This quote expired. Get a new quote.');
         abort_if($this->orderService->queryForAccount($context)->where('meta->customer_portal->service_quote_uuid', $quote->uuid)->exists(),
             409, 'This quote has already created a delivery.');

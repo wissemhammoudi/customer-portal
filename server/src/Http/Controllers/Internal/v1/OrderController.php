@@ -218,6 +218,9 @@ class OrderController extends Controller
         }
         $creationFingerprint = PortalOrderService::creationFingerprint($request->all());
         if ($serviceQuote) {
+            (new \Fleetbase\CustomerPortal\Services\PortalExpressService())->assertQuotePrice(
+                $serviceQuote, $request->input('meta.delivery.service_level', 'standard')
+            );
             $existing = $this->orderService->existingOrderForQuote($serviceQuote->uuid, $creationFingerprint, $context);
             if ($existing) {
                 $request->merge(['with_tracker_data' => true, 'with_eta' => true]);

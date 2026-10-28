@@ -70,8 +70,10 @@ workflow enrollments. Checkout drafts can retain return contracts.
 
 The schedule date/time field is always visible, optional until chosen, and must
 be a valid future timestamp when provided. Standard and Express are the only
-customer service choices. **Express remains blocked by the shared FleetOps
-pricing safety gate until Express pricing is configured**; the portal does not
+customer service choices. Express adds **4.000 TND (4000 millimes)** to a TND
+delivery quote before the 20% return discount. Non-TND Express quotes are rejected.
+Linked returns remove the verified original Express surcharge before pricing the
+selected service level, avoiding double charging. The portal does not
 silently price it as Standard or change dispatcher/admin behavior.
 
 Both app and web use the authenticated `customer-portal/int/v1` namespace:
@@ -174,7 +176,7 @@ For requests containing `meta.delivery`, both preliminary quotes and order creat
 
 - Supply pickup and dropoff together, or at least two waypoints, and at least one named parcel with a current, compatible packaging classification. Invalid or unavailable route stops are rejected rather than removed.
 - Route, parcel, and COD fields can be supplied inside `payload` or at the top level. Conflicting duplicate values are rejected. An explicitly invalid workflow never falls back to another workflow.
-- Supply a current, account-scoped `service_quote_uuid` (or a purchase rate belonging to that quote). Changes to delivery details require a fresh quote. New Express selections remain unavailable until pricing is configured.
+- Supply a current, account-scoped `service_quote_uuid` (or a purchase rate belonging to that quote). Changes to delivery details or service level require a fresh quote. Express quote totals, line items and surcharge metadata are verified again before checkout and order creation.
 - COD uses `cod_amount` in major currency units, an uppercase ISO `cod_currency`, and `cod_payment_method: "cash"`. Send amounts as decimal strings, not floating-point calculations. For example, `"125.5"` TND is persisted as `125500` millimes. Excess currency precision and amounts beyond the signed SQL INT column limit are rejected, never rounded.
 - Document attachments use uploaded file UUID strings in `files`. Uploading a file and attaching it to an order remain separate operations.
 

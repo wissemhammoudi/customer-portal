@@ -40,7 +40,7 @@ class PortalReturnService
         }
     }
 
-    public function originalPrice(Order $original): array
+    public function originalPrice(Order $original, string $serviceLevel = 'standard'): array
     {
         $original->loadMissing(['purchaseRate.serviceQuote', 'transaction']);
         $quote = $original->purchaseRate?->serviceQuote;
@@ -53,7 +53,21 @@ class PortalReturnService
             throw ValidationException::withMessages(['meta.delivery.original_order_uuid' => 'The original delivery has no valid delivery fee currency. Contact support.']);
         }
 
-        return ['amount' => (int) $amount, 'currency' => $currency, 'service_rate_uuid' => $quote?->service_rate_uuid];
+        $amount = (int) $amount;
+        if (data_get($original->meta, 'delivery.service_level') === 'express') {
+            abort_unless($quote, 422, 'The original Express delivery has no verifiable quote. Contact support.');
+            (new PortalExpressService())->assertQuotePrice($quote, 'express');
+            $surcharge = data_get($quote->meta, 'customer_portal_return_price') !== null
+                ? $this->discountedAmount(PortalExpressService::SURCHARGE) : PortalExpressService::SURCHARGE;
+            $amount -= $surcharge;
+            $this->discountedAmount($amount);
+        }
+        if ($serviceLevel === 'express') {
+            $amount = (new PortalExpressService())->addSurcharge($amount, $currency);
+        }
+
+        return ['amount' => $amount, 'currency' => $currency, 'service_rate_uuid' => $quote?->service_rate_uuid,
+            'service_level' => $serviceLevel];
     }
 
     public function discountedAmount($amount): int
@@ -79,6 +93,7 @@ class PortalReturnService
         $quote->updateMeta('customer_portal_return_price', [
             'base_amount' => (int) $price['amount'], 'amount' => $amount, 'currency' => $price['currency'],
             'original_order_uuid' => $price['original_order_uuid'] ?? null,
+            'service_level' => $price['service_level'] ?? 'standard',
         ]);
     }
 
@@ -87,7 +102,7 @@ class PortalReturnService
         $price = data_get($quote->meta, 'customer_portal_return_price');
         abort_if(!is_array($price), 422, 'Get a current return delivery quote.');
         if ($original) {
-            $current = $this->originalPrice($original);
+            $current = $this->originalPrice($original, $price['service_level'] ?? 'standard');
             abort_if(($price['original_order_uuid'] ?? null) !== $original->uuid
                 || (int) ($price['base_amount'] ?? 0) !== $current['amount']
                 || ($price['currency'] ?? null) !== $current['currency'], 422, 'The original delivery fee changed. Get a new return quote.');
