@@ -692,6 +692,13 @@ class OrderController extends Controller
 
     protected function orderDetailsResponse(Order $order): array
     {
+        // Read readiness before loading files so a newly ready document is included.
+        $shippingDocuments = class_exists(\App\Support\ShippingDocumentStatus::class)
+            ? \App\Support\ShippingDocumentStatus::forOrder($order)
+            : null;
+        if ($shippingDocuments !== null) {
+            $order->unsetRelation('files');
+        }
         $order = $this->loadOrderDetails($order);
 
         try {
@@ -708,6 +715,9 @@ class OrderController extends Controller
         $data['tracking_statuses'] = TrackingStatusResource::collection($order->trackingStatuses)->resolve();
         $data['transaction']       = $order->transaction ? $order->transaction->toArray() : null;
         $data['proofs']            = ProofResource::collection($order->proofs)->resolve();
+        if ($shippingDocuments !== null) {
+            $data['shipping_documents'] = $shippingDocuments;
+        }
 
         return $data;
     }

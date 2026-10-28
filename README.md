@@ -44,6 +44,25 @@ production activation or Express release.
 
 ## Features
 
+### Invoice PDFs (Colab Express deployment)
+
+Billing lists order/payment Ledger invoices separately from monthly COD fee
+invoices. Issued invoices offer **View PDF** and **Download PDF**, with preparation
+and retryable error states. Draft Ledger invoices are not issued documents.
+Monthly COD fees and VAT are already settled from COD: these records have no
+additional payment action and do not increase the outstanding Ledger balance.
+
+The host application's authenticated invoice endpoints verify company, customer
+account and customer type before returning a fresh five-minute signed delivery
+URL. Delivery links are not invoice references or persisted customer state.
+The host archives issued content and generated PDF bytes in
+`customer_invoice_archives`; retain this table in database backups. Existing
+invoices are archived on their first PDF request; their earlier party/template
+versions cannot be reconstructed if changed before archive rollout.
+New COD invoices are snapshotted at generation and Ledger invoices at issue.
+The reusable `<Portal::InvoicePdfActions @invoice={{invoice}} @kind="cod" />`
+component also supports wallet invoice rows (`kind` defaults to Ledger).
+
 ### Customer delivery policy and shared pickup API
 
 Customer deliveries support Transportation or Return, with one pickup and one

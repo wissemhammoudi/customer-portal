@@ -1,0 +1,63 @@
+<Portal::ContentWrapper class="portal-page-card">
+    <div class="portal-section-header">
+        <div>
+            <h1>Wallet</h1>
+            <p>Your cash-on-delivery earnings. Delivery fees and VAT are already deducted.</p>
+        </div>
+        <Button @text="Refresh" @icon="arrows-rotate" @onClick={{perform this.load}} @disabled={{or this.load.isRunning this.submit.isRunning}} />
+    </div>
+    {{#if this.error}}<p role="alert" class="mt-4">{{this.error}}</p>{{/if}}
+    {{#if this.load.isRunning}}<p role="status">Loading wallet...</p>{{/if}}
+    {{#if this.data}}
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-5">
+            {{#each this.balances as |balance|}}
+                <div class="border rounded p-4">
+                    <h2>{{balance.label}}</h2>
+                    <p class="text-xl font-semibold">{{balance.amount}}</p>
+                </div>
+            {{/each}}
+        </div>
+        <p class="mt-3">Pending money becomes available after Colab Express receives the full cash collection from the driver.</p>
+        <ContentPanel @title="Request a payout" @open={{true}} @wrapperClass="bordered-classic mt-5">
+            <p>Minimum payout: {{this.minimum}}. Requested funds are reserved until the request is paid or rejected.</p>
+            <form {{on "submit" this.submitForm}} class="space-y-3">
+                <label class="block">Amount ({{this.data.wallet.currency}})
+                    <Input @value={{this.amount}} inputmode="decimal" class="form-input w-full" />
+                </label>
+                <label class="block">Method
+                    <select class="form-select w-full" {{on "change" this.setMethod}}>
+                        <option value="bank_transfer" selected={{eq this.method "bank_transfer"}}>Bank transfer</option>
+                        <option value="office_cash" selected={{eq this.method "office_cash"}}>Cash at office</option>
+                    </select>
+                </label>
+                {{#if (eq this.method "bank_transfer")}}
+                    <label class="block">RIB (20 digits)
+                        <Input @value={{this.rib}} inputmode="numeric" maxlength="20" class="form-input w-full" />
+                    </label>
+                {{/if}}
+                <Button
+                    @text="Request payout"
+                    @type="primary"
+                    @onClick={{perform this.submit}}
+                    @disabled={{or this.submit.isRunning this.load.isRunning}}
+                    @isLoading={{this.submit.isRunning}}
+                />
+            </form>
+        </ContentPanel>
+        <h2 class="text-lg font-semibold mt-5">Payout history</h2>
+        <div class="overflow-x-auto">
+            <table class="portal-table w-full">
+                <thead><tr><th>Requested</th><th>Amount</th><th>Method</th><th>Status</th><th>Payment reference / note</th></tr></thead>
+                <tbody>
+                    {{#each this.payouts as |payout|}}
+                        <tr><td>{{payout.created_at}}</td><td>{{payout.formattedAmount}}</td><td>{{payout.methodLabel}}</td><td>{{payout.status}}</td><td>{{payout.reference}}
+                                {{payout.note}}</td></tr>
+                    {{else}}
+                        <tr><td colspan="5">No payout requests yet.</td></tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+        <p class="mt-4"><LinkTo @route="portal.billing">View invoices in Billing</LinkTo></p>
+    {{/if}}
+</Portal::ContentWrapper>

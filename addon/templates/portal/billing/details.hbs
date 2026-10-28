@@ -11,6 +11,7 @@
             <p>Invoice details, line item preview, and payment status.</p>
         </div>
         <div class="portal-invoice-actions">
+            <Portal::InvoicePdfActions @invoice={{this.invoice}} />
             {{#if this.isPayable}}
                 <a href={{this.paymentUrl}} target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">
                     <FaIcon @icon="arrow-up-right-from-square" class="mr-2" />
@@ -35,7 +36,7 @@
         </div>
         <div class="field-info-container">
             <div class="field-name">Balance</div>
-            <div class="field-value font-semibold">{{format-currency this.balanceAmount this.invoice.currency}}</div>
+            <div class="field-value font-semibold">{{invoice-money this.balanceAmount this.invoice.currency}}</div>
         </div>
     </div>
 
@@ -59,8 +60,8 @@
                 <div class="portal-invoice-table-row">
                     <span>{{n-a item.description}}</span>
                     <span>{{n-a item.quantity}}</span>
-                    <span>{{format-currency item.unit_price this.invoice.currency}}</span>
-                    <span>{{format-currency item.amount this.invoice.currency}}</span>
+                    <span>{{invoice-money item.unit_price this.invoice.currency}}</span>
+                    <span>{{invoice-money item.amount this.invoice.currency}}</span>
                 </div>
             {{else}}
                 <div class="portal-empty-state compact">No line items recorded for this invoice.</div>
@@ -70,25 +71,25 @@
         <div class="portal-invoice-totals">
             <div>
                 <span>Subtotal</span>
-                <span>{{format-currency this.subtotalAmount this.invoice.currency}}</span>
+                <span>{{invoice-money this.subtotalAmount this.invoice.currency}}</span>
             </div>
             {{#if this.taxAmount}}
                 <div>
                     <span>Tax</span>
-                    <span>{{format-currency this.taxAmount this.invoice.currency}}</span>
+                    <span>{{invoice-money this.taxAmount this.invoice.currency}}</span>
                 </div>
             {{/if}}
             <div class="total">
                 <span>Total</span>
-                <span>{{format-currency this.totalAmount this.invoice.currency}}</span>
+                <span>{{invoice-money this.totalAmount this.invoice.currency}}</span>
             </div>
             <div>
                 <span>Paid</span>
-                <span>{{format-currency this.amountPaid this.invoice.currency}}</span>
+                <span>{{invoice-money this.amountPaid this.invoice.currency}}</span>
             </div>
             <div>
                 <span>Balance Due</span>
-                <span>{{format-currency this.balanceAmount this.invoice.currency}}</span>
+                <span>{{invoice-money this.balanceAmount this.invoice.currency}}</span>
             </div>
         </div>
 

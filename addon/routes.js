@@ -19,6 +19,7 @@ export default buildRoutes(function () {
             this.route('index', { path: '/' });
             this.route('details', { path: '/:id' });
         });
+        this.route('wallet');
         this.route('support', function () {
             this.route('index', { path: '/' });
             this.route('new');

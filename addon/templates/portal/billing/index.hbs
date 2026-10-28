@@ -5,6 +5,7 @@
             <h1>Billing</h1>
             <p>View invoices, balances, receipts, and payment status.</p>
         </div>
+        {{#if this.model.billingError}}<p role="alert">Unable to load order invoices. Refresh to try again.</p>{{/if}}
     </div>
     <div class="next-table-wrapper no-scroll h-auto table-fluid portal-table-panel mt-5">
         <table class="table table-fixed portal-table">
@@ -15,6 +16,7 @@
                     <th class="text-left">Due</th>
                     <th class="text-left">Status</th>
                     <th class="text-right">Balance</th>
+                    <th class="text-left">PDF</th>
                 </tr>
             </thead>
             <tbody>
@@ -36,11 +38,12 @@
                         </td>
                         <td>{{n-a (format-date-fns invoice.due_date "yyyy-MM-dd")}}</td>
                         <td><Badge @status={{invoice.status}} /></td>
-                        <td class="text-right">{{format-currency (or invoice.balance 0) invoice.currency}}</td>
+                        <td class="text-right">{{invoice-money (or invoice.balance 0) invoice.currency}}</td>
+                        <td><Portal::InvoicePdfActions @invoice={{invoice}} /></td>
                     </tr>
                 {{else}}
                     <tr>
-                        <td colspan="5">
+                        <td colspan="6">
                             <div class="portal-empty-state portal-table-empty-state">
                                 <div class="portal-empty-state-icon"><FaIcon @icon="file-invoice-dollar" /></div>
                                 <div class="portal-empty-state-title">No invoices yet</div>
@@ -48,6 +51,28 @@
                             </div>
                         </td>
                     </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+    <div class="portal-section-header mt-5">
+        <div><h2>Monthly COD fee invoices</h2><p>Fees and VAT already deducted from collected COD. No additional payment is due.</p></div>
+    </div>
+    {{#if this.model.feeInvoicesError}}<p role="alert">Unable to load COD fee invoices. Refresh to try again.</p>{{/if}}
+    <div class="next-table-wrapper no-scroll h-auto table-fluid portal-table-panel mt-5">
+        <table class="table portal-table">
+            <thead><tr><th class="text-left">Invoice</th><th class="text-left">Period</th><th class="text-left">Status</th><th class="text-right">Fees</th><th class="text-right">VAT</th><th class="text-right">Total</th><th class="text-left">PDF</th></tr></thead>
+            <tbody>
+                {{#each this.model.feeInvoices as |invoice|}}
+                    <tr>
+                        <td>{{invoice.number}}</td><td>{{invoice.period}}</td><td><Badge @status={{invoice.status}} /></td>
+                        <td class="text-right">{{invoice-money invoice.fee_total invoice.currency}}</td>
+                        <td class="text-right">{{invoice-money invoice.vat_total invoice.currency}}</td>
+                        <td class="text-right">{{invoice-money invoice.total invoice.currency}}</td>
+                        <td><Portal::InvoicePdfActions @invoice={{invoice}} @kind="cod" /></td>
+                    </tr>
+                {{else}}
+                    <tr><td colspan="7">No monthly COD fee invoices yet.</td></tr>
                 {{/each}}
             </tbody>
         </table>

@@ -1,0 +1,10 @@
+<div class="portal-invoice-actions">
+    {{#if this.unavailable}}
+        <span class="text-gray-500 text-sm">PDF available after issue</span>
+    {{else}}
+        <button type="button" class="btn btn-default btn-sm" disabled={{this.busy}} {{on "click" (fn this.open false)}}>View PDF</button>
+        <button type="button" class="btn btn-default btn-sm" disabled={{this.busy}} {{on "click" (fn this.open true)}}>Download PDF</button>
+        {{#if this.busy}}<span role="status" class="text-sm">Preparing invoice PDF…</span>{{/if}}
+        {{#if this.error}}<span role="alert" class="text-red-600 text-sm">{{this.error}}</span>{{/if}}
+    {{/if}}
+</div>

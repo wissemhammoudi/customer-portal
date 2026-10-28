@@ -1,0 +1,22 @@
+<section class="space-y-3 mb-6">
+    <h2 class="text-xl font-semibold">Notifications</h2>
+    <p>Unread: {{or this.data.unread_count 0}}. Payout decisions are saved here and in the mobile inbox.</p>
+    <Button @text="Refresh notifications" @onClick={{perform this.load this.page}} @disabled={{or this.load.isRunning this.read.isRunning}} />
+    {{#if this.error}}<p role="alert">{{this.error}}</p>{{/if}}
+    {{#each this.data.notifications as |notification|}}
+        <div class="border rounded p-3">
+            <h3 class="font-semibold">{{notification.data.subject}}</h3>
+            <p>{{notification.data.message}}</p>
+            <p>{{notification.created_at}}</p>
+            {{#if notification.data.payout_uuid}}<LinkTo @route="portal.wallet">View wallet</LinkTo>{{/if}}
+            {{#unless notification.read_at}}
+                <Button @text="Mark read" @onClick={{perform this.read notification.id}} @disabled={{or this.read.isRunning this.load.isRunning}} />
+            {{/unless}}
+        </div>
+    {{else}}
+        {{#unless this.load.isRunning}}<p>No notifications on this page.</p>{{/unless}}
+    {{/each}}
+    <Button @text="Previous notifications" @onClick={{perform this.load this.previousPage}} @disabled={{or this.load.isRunning this.firstPage}} />
+    <span>Page {{this.page}}</span>
+    <Button @text="Next notifications" @onClick={{perform this.load this.nextPage}} @disabled={{or this.load.isRunning (not this.data.has_more)}} />
+</section>
