@@ -59,7 +59,10 @@ The host archives issued content and generated PDF bytes in
 `customer_invoice_archives`; retain this table in database backups. Existing
 invoices are archived on their first PDF request; their earlier party/template
 versions cannot be reconstructed if changed before archive rollout.
-New COD invoices are snapshotted at generation and Ledger invoices at issue.
+New COD invoices are snapshotted at generation and Ledger invoices at issue. Ledger issue,
+its final line items and the archive commit in one transaction (the host binds
+archiving overrides of Ledger's invoice service/controller); first issues written
+outside a transaction are rejected, and "invoice sent" emails queue after commit.
 The reusable `<Portal::InvoicePdfActions @invoice={{invoice}} @kind="cod" />`
 component also supports wallet invoice rows (`kind` defaults to Ledger).
 
