@@ -47,13 +47,13 @@
         <h2 class="text-lg font-semibold mt-5">Payout history</h2>
         <div class="overflow-x-auto">
             <table class="portal-table w-full">
-                <thead><tr><th>Requested</th><th>Amount</th><th>Method</th><th>Status</th><th>Payment reference / note</th></tr></thead>
+                <thead><tr><th>Requested</th><th>Amount</th><th>Method</th><th>Status</th><th>Payment reference / note</th><th>Receipt of money</th></tr></thead>
                 <tbody>
                     {{#each this.payouts as |payout|}}
                         <tr><td>{{payout.created_at}}</td><td>{{payout.formattedAmount}}</td><td>{{payout.methodLabel}}</td><td>{{payout.status}}</td><td>{{payout.reference}}
-                                {{payout.note}}</td></tr>
+                                {{payout.note}}</td><td><Portal::PayoutReceipt @payout={{payout}} @currency={{this.data.wallet.currency}} @onSigned={{perform this.load}} /></td></tr>
                     {{else}}
-                        <tr><td colspan="5">No payout requests yet.</td></tr>
+                        <tr><td colspan="6">No payout requests yet.</td></tr>
                     {{/each}}
                 </tbody>
             </table>

@@ -2,6 +2,16 @@ body.fleetbase-portal {
     overflow-y: scroll;
 }
 
+.portal-payout-signature {
+    width: 100%;
+    min-width: 220px;
+    height: 180px;
+    touch-action: none;
+    background: #fff;
+    border: 1px solid #606068;
+    border-radius: 10px;
+}
+
 body[data-theme='dark'].fleetbase-portal {
     color: #e5e7eb;
 }

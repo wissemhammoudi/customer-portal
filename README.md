@@ -46,11 +46,33 @@ production activation or Express release.
 
 ### Invoice PDFs (Colab Express deployment)
 
-Billing lists order/payment Ledger invoices separately from monthly COD fee
-invoices. Issued invoices offer **View PDF** and **Download PDF**, with preparation
+Billing lists regular order/payment Ledger invoices, without a COD fee-invoice
+section or outstanding-invoices summary card. Issued invoices offer **View PDF** and **Download PDF**, with preparation
 and retryable error states. Draft Ledger invoices are not issued documents.
-Monthly COD fees and VAT are already settled from COD: these records have no
-additional payment action and do not increase the outstanding Ledger balance.
+Monthly COD fee accounting and stored records are unchanged; they are not payout proof.
+
+### Wallet and signed cash payout receipts (Colab Express deployment)
+
+Wallet retains available/pending balances and bank-transfer or office-cash payout
+requests, matching the Customer mobile app. Payout history distinguishes staff
+payment from the customer's acknowledgment of receiving cash.
+
+Only after staff mark an office-cash payout paid with a payment reference can the
+authenticated customer enter their full name, draw a signature and explicitly
+confirm receiving the full displayed amount. The immutable receipt can then be
+viewed/downloaded as a PDF. Signing does not pay again or change wallet balances.
+Failed saves retain the signature; refresh Wallet before retrying if the response
+was lost. Bank transfers do not use a cash signature.
+
+This uses the same backend as mobile: `POST`/`GET`
+`customer-portal/int/v1/wallet/payouts/{id}/receipt`. Receipt PDFs use private
+five-minute links and contain a handwritten electronic acknowledgment, not a
+certificate-based digital signature. There is no new staff signing screen.
+
+Deploy the backend receipt controller/support/routes and run
+`2026_11_01_000002_create_customer_payout_receipts.php` after a database backup
+before releasing this Wallet; payout history requires that table. Clear/rebuild
+API caches and rebuild/redeploy the host console to load the updated engine.
 
 The host application's authenticated invoice endpoints verify company, customer
 account and customer type before returning a fresh five-minute signed delivery

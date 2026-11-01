@@ -1,0 +1,45 @@
+<div class="space-y-2">
+    {{#if this.received}}
+        <p>Cash receipt signed by customer.</p>
+        {{#if @payout.receipt}}<p>{{@payout.receipt.signer_name}} · {{@payout.receipt.signed_at}}</p>{{/if}}
+        <button type="button" class="btn btn-default btn-sm" disabled={{this.busy}} {{on "click" (fn this.open false)}}>View signed receipt</button>
+        <button type="button" class="btn btn-default btn-sm" disabled={{this.busy}} {{on "click" (fn this.open true)}}>Download signed receipt</button>
+    {{else if this.bankPaid}}
+        <p>Bank transfer recorded by staff. No cash receipt signature applies.</p>
+    {{else if this.canSign}}
+        <p>Paid by staff; customer receipt not signed.</p>
+        {{#if this.editing}}
+            <p>Only sign after receiving {{this.amount}} in cash from Colab Express.</p>
+            <label class="block">Recipient full name
+                <Input @value={{this.name}} maxlength="120" disabled={{this.busy}} class="form-input w-full" />
+            </label>
+            <p>Draw your signature in the box.</p>
+            {{! template-lint-disable no-pointer-down-event-binding }}
+            {{! Signature strokes must capture the initial contact, not activate an action. }}
+            <canvas
+                width="800"
+                height="240"
+                aria-label="Customer signature"
+                class="portal-payout-signature"
+                {{did-insert this.setupCanvas}}
+                {{on "pointerdown" this.begin}}
+                {{on "pointermove" this.move}}
+                {{on "pointerup" this.finish}}
+                {{on "pointercancel" this.finish}}
+            >
+                Use a touch screen or pointing device to draw your signature.
+            </canvas>
+            {{! template-lint-enable no-pointer-down-event-binding }}
+            <button type="button" class="btn btn-default btn-sm" disabled={{this.busy}} {{on "click" this.clear}}>Clear signature</button>
+            <p>By signing, I confirm that I received the full cash amount shown above. This receipt cannot be changed after confirmation.</p>
+            <button type="button" class="btn btn-primary btn-sm" disabled={{this.disabled}} {{on "click" this.sign}}>Confirm cash received and sign</button>
+            <button type="button" class="btn btn-default btn-sm" disabled={{this.busy}} {{on "click" this.cancel}}>Cancel</button>
+        {{else}}
+            <button type="button" class="btn btn-default btn-sm" {{on "click" this.start}}>Sign cash receipt</button>
+        {{/if}}
+    {{else}}
+        <p>Not paid yet. A payout request is not proof of receiving money.</p>
+    {{/if}}
+    {{#if this.busy}}<p role="status">Preparing receipt...</p>{{/if}}
+    {{#if this.error}}<p role="alert">{{this.error}}</p>{{/if}}
+</div>
