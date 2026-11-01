@@ -103,17 +103,19 @@ class OrderController extends Controller
 
     public function collectionReadiness(string $id)
     {
+        $input = request()->validate(['pickup_date' => 'sometimes|date_format:Y-m-d']);
         $order = $this->orderService->resolveOrder($id, $this->accountResolver->resolve());
-        return response()->json(['collection' => CollectionReadiness::preview($order)]);
+        return response()->json(['collection' => CollectionReadiness::preview($order, $input['pickup_date'] ?? null)]);
     }
 
     public function updateCollectionReadiness(Request $request, string $id)
     {
-        $request->validate(['ready' => 'required|boolean', 'confirmation_token' => 'nullable|string|size:64']);
+        $request->validate(['ready' => 'required|boolean', 'confirmation_token' => 'nullable|string|size:64',
+            'pickup_start' => 'nullable|date_format:Y-m-d\TH:i:s.u\Z']);
         abort_unless(session('user'), 403, 'An authenticated customer is required.');
         return (new Order())->getConnection()->transaction(function () use ($request, $id) {
             $order = $this->orderService->resolveOrder($id, $this->accountResolver->resolve(), true);
-            $order->recordCollectionReadiness($request->boolean('ready'), $request->input('confirmation_token'));
+            $order->recordCollectionReadiness($request->boolean('ready'), $request->input('confirmation_token'), $request->input('pickup_start'));
             if ($order->isDirty()) {
                 $order->save();
             }

@@ -10,15 +10,31 @@ export default class PortalOrderCollectionReadinessComponent extends Component {
     @service notifications;
     @service modalsManager;
     @tracked preview = null;
+    @tracked pickupStart = '';
+
+    get needsSlot() {
+        return !this.preview?.pickup_slots?.length || !this.pickupStart;
+    }
+
+    @action selectSlot(event) {
+        this.pickupStart = event.target.value;
+    }
+
+    @action selectDate(event) {
+        this.review.perform(event.target.value);
+    }
 
     get workflow() {
         return valueFor(this.args.order, 'meta.collection_workflow');
     }
 
     get editable() {
-        return !['completed', 'done', 'delivered', 'canceled', 'cancelled'].includes(valueFor(this.args.order, 'status'))
-            && this.workflow?.version === 1 && !this.workflow?.collection_round_uuid
-            && ['awaiting_preparation', 'ready_for_pickup'].includes(this.workflow?.state);
+        return (
+            !['completed', 'done', 'delivered', 'canceled', 'cancelled'].includes(valueFor(this.args.order, 'status')) &&
+            this.workflow?.version === 1 &&
+            !this.workflow?.collection_round_uuid &&
+            ['awaiting_preparation', 'ready_for_pickup'].includes(this.workflow?.state)
+        );
     }
 
     get awaitingPreparation() {
@@ -44,9 +60,11 @@ export default class PortalOrderCollectionReadinessComponent extends Component {
         return planned ? `${new Date(planned).toLocaleString(undefined, { timeZone: timezone })} (${timezone})` : null;
     }
 
-    @dropTask *review() {
+    @dropTask *review(date) {
+        this.preview = null;
+        this.pickupStart = '';
         try {
-            this.preview = yield this.customerPortalOrderActions.collectionReadiness(this.args.order);
+            this.preview = yield this.customerPortalOrderActions.collectionReadiness(this.args.order, typeof date === 'string' ? date : undefined);
         } catch (error) {
             this.notifications.serverError(error);
         }
@@ -58,7 +76,13 @@ export default class PortalOrderCollectionReadinessComponent extends Component {
 
     @dropTask *confirm(ready) {
         try {
-            const order = yield this.customerPortalOrderActions.setCollectionReadiness(this.args.order, ready, ready ? this.preview?.confirmation_token : this.workflow?.confirmation_token);
+            if (ready && this.needsSlot) throw new Error('Select a pickup window before confirming readiness.');
+            const order = yield this.customerPortalOrderActions.setCollectionReadiness(
+                this.args.order,
+                ready,
+                ready ? this.preview?.confirmation_token : this.workflow?.confirmation_token,
+                ready ? this.pickupStart || undefined : undefined
+            );
             this.preview = null;
             this.args.onChanged(order);
             this.notifications.success(ready ? 'Order is ready for pickup.' : 'Readiness withdrawn. Mark the order ready again after preparation.');

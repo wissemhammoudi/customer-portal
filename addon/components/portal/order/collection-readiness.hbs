@@ -20,7 +20,45 @@
                 <p>Physical parcels: {{this.preview.parcel_count}}</p>
                 {{#each this.preview.parcels as |parcel|}}<p>{{parcel.name}}: {{parcel.quantity}}</p>{{/each}}
                 <p>Check these pickup contacts and every parcel below. Packaging must comply with the guide. This is a planned date, not a guaranteed appointment.</p>
-                <Button @text="Confirm parcels are ready" @onClick={{perform this.confirm true}} @isLoading={{this.confirm.isRunning}} @disabled={{this.confirm.isRunning}} data-test-collection-confirm />
+                {{#if this.preview.pickup_slots.length}}
+                    {{#if this.preview.available_pickup_dates.length}}
+                        <label>Available pickup dates
+                            <select
+                                aria-label="Available pickup dates"
+                                value={{this.preview.pickup_date}}
+                                disabled={{or this.confirm.isRunning this.review.isRunning}}
+                                {{on "change" this.selectDate}}
+                            >
+                                {{#each this.preview.available_pickup_dates as |date|}}<option value={{date}} selected={{eq date this.preview.pickup_date}}>{{date}}</option>{{/each}}
+                            </select>
+                        </label>
+                        <p>The next seven operating dates are shown. You can request another future date below; closed days are unavailable.</p>
+                    {{/if}}
+                    <label>Pickup date
+                        <input
+                            aria-label="Pickup date"
+                            type="date"
+                            value={{this.preview.pickup_date}}
+                            disabled={{or this.confirm.isRunning this.review.isRunning}}
+                            {{on "change" this.selectDate}}
+                        /></label>
+                    <label>Pickup window ({{this.preview.timezone}})
+                        <select aria-label="Pickup window" value={{this.pickupStart}} disabled={{or this.confirm.isRunning this.review.isRunning}} {{on "change" this.selectSlot}}>
+                            <option value="">Choose a pickup window</option>
+                            {{#each this.preview.pickup_slots as |slot|}}<option value={{slot.start}}>{{slot.label}}</option>{{/each}}
+                        </select>
+                    </label>
+                    <p>Your parcels are ready now. Stay available throughout the chosen window; this is not a guaranteed arrival time.</p>
+                {{else}}
+                    <p role="alert">Pickup time windows are not configured. Contact support to arrange collection.</p>
+                {{/if}}
+                <Button
+                    @text="Confirm parcels are ready"
+                    @onClick={{perform this.confirm true}}
+                    @isLoading={{this.confirm.isRunning}}
+                    @disabled={{or this.confirm.isRunning this.review.isRunning this.needsSlot}}
+                    data-test-collection-confirm
+                />
                 <Button @text="Keep preparing" @onClick={{this.keepPreparing}} @disabled={{this.confirm.isRunning}} />
             {{else if this.awaitingPreparation}}
                 <Button @text="Ready for pickup" @onClick={{perform this.review}} @isLoading={{this.review.isRunning}} @disabled={{this.review.isRunning}} data-test-collection-ready />

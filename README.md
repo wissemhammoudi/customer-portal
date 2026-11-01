@@ -30,6 +30,15 @@ pickup in order details. **Ready for pickup** loads a scoped server preview;
 **Confirm parcels are ready** commits readiness. The preview includes pickup
 contacts, physical parcel count and timezone. **Keep preparing** changes nothing.
 **Withdraw readiness** requires confirmation and is allowed only before planning.
+Customers select an available date and configured pickup window before confirming.
+The next seven operating dates are shown; another future date can be requested
+and checked against the same calendar. Missing windows block confirmation with a
+support message. Confirmation sets the actual main order status to
+`ready_for_pickup`, not only a metadata badge. The coordinator then plans the
+round and assigns the pickup driver; later pickup/depot actions synchronize the
+main status. Deploy the compatible FleetOps backend and
+`2026_11_01_000003_sync_collection_order_statuses.php` after backup with writes
+paused to align existing enrolled pickup orders.
 Calendar/content/cutoff changes invalidate confirmation; HTTP 409 is surfaced and
 the customer must review again. Repeated successful requests do not create orders
 or duplicate readiness history. Failed confirmations do not discard the order.

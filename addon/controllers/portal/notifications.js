@@ -5,6 +5,9 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
 const DEFAULT_PREFERENCES = {
+    pickup_scheduled: true,
+    pickup_in_progress: true,
+    collected: true,
     order_created: true,
     order_dispatched: true,
     order_delayed: true,
@@ -17,6 +20,11 @@ const DEFAULT_PREFERENCES = {
 };
 
 const PREFERENCE_GROUPS = [
+    {
+        title: 'Pickup',
+        description: 'Pickup scheduled, collection round started and parcel collection updates.',
+        keys: ['pickup_scheduled', 'pickup_in_progress', 'collected'],
+    },
     {
         title: 'Orders',
         description: 'Operational updates while your shipments move through dispatch and delivery.',

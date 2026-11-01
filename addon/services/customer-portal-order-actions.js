@@ -114,15 +114,15 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
         return yield this.fetch.post(`orders/${this.identifier(order)}/cancel`, {}, normalizeOptions('order'));
     }
 
-    async collectionReadiness(order) {
-        const response = await this.fetch.get(`orders/${encodeURIComponent(this.identifier(order))}/collection-readiness`, {}, { namespace: NAMESPACE });
+    async collectionReadiness(order, pickupDate) {
+        const response = await this.fetch.get(`orders/${encodeURIComponent(this.identifier(order))}/collection-readiness`, pickupDate ? { pickup_date: pickupDate } : {}, { namespace: NAMESPACE });
         return response.collection;
     }
 
-    setCollectionReadiness(order, ready, confirmationToken) {
+    setCollectionReadiness(order, ready, confirmationToken, pickupStart) {
         return this.fetch.post(
             `orders/${encodeURIComponent(this.identifier(order))}/collection-readiness`,
-            { ready, ...(confirmationToken ? { confirmation_token: confirmationToken } : {}) },
+            { ready, ...(confirmationToken ? { confirmation_token: confirmationToken } : {}), ...(pickupStart ? { pickup_start: pickupStart } : {}) },
             normalizeOptions('order')
         );
     }
