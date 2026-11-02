@@ -1,0 +1,50 @@
+<div class="portal-order-item-card space-y-3" {{did-insert this.load}} {{did-update this.load @revision}}>
+    <h3 class="font-semibold dark:text-gray-100">Saved parcels</h3>
+    <p class="text-sm text-gray-500">Private templates shared with your mobile app. Save a completed item below, then reuse it with a quantity for each order. Existing orders are never
+        changed by editing a template.</p>
+    <InputGroup @name="Quantity to add">
+        <input aria-label="Saved parcel quantity" type="number" min="1" step="1" value={{this.quantity}} class="form-input" {{on "input" this.setQuantity}} />
+    </InputGroup>
+    {{#each this.parcels as |template|}}
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="font-semibold dark:text-gray-100">{{template.parcel.name}}</span>
+            <Button @text="Add to order" @size="xs" @disabled={{this.busy}} @onClick={{fn this.select template}} />
+            <Button @text="Edit saved parcel" @size="xs" @disabled={{this.busy}} @onClick={{fn this.edit template}} />
+            <Button @text="Delete saved parcel" @type="danger" @size="xs" @disabled={{this.busy}} @onClick={{fn this.remove template}} />
+        </div>
+    {{else}}
+        {{#unless this.loading}}<p class="text-sm text-gray-500">No saved parcels yet.</p>{{/unless}}
+    {{/each}}
+    {{#if this.editing}}
+        <div class="space-y-3">
+            <InputGroup @name="Saved parcel name">
+                <input aria-label="Saved parcel name" value={{this.editing.name}} class="form-input w-full" {{on "input" (fn this.setField "name")}} />
+            </InputGroup>
+            <InputGroup @name="Saved parcel details">
+                <textarea aria-label="Saved parcel details" value={{this.editing.description}} class="form-input w-full" {{on "input" (fn this.setField "description")}}></textarea>
+            </InputGroup>
+            <ParcelPackaging @meta={{this.editing.meta}} @onChange={{this.setMeta}} />
+            <div class="grid grid-cols-2 gap-2">
+                {{#each (array "weight" "length" "width" "height") as |field|}}
+                    <InputGroup @name={{if (eq field "weight") "Weight (kg)" (concat field " (cm)")}}>
+                        <input
+                            aria-label={{concat "Saved " field}}
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={{get this.editing field}}
+                            class="form-input w-full"
+                            {{on "input" (fn this.setField field)}}
+                        />
+                    </InputGroup>
+                {{/each}}
+            </div>
+            <Button @text="Update saved parcel" @isLoading={{this.busy}} @onClick={{this.save}} />
+            <Button @text="Cancel" @disabled={{this.busy}} @onClick={{this.cancel}} />
+        </div>
+    {{/if}}
+    {{#if this.loading}}<p role="status">Loading saved parcels...</p>{{/if}}
+    {{#if this.error}}<p role="alert">Saved parcels could not be loaded. Retry below.</p>{{/if}}
+    {{#if this.nextPage}}<Button @text="More saved parcels" @disabled={{this.loading}} @onClick={{this.more}} />{{/if}}
+    <Button @text="Refresh saved parcels" @disabled={{this.loading}} @onClick={{this.load}} />
+</div>

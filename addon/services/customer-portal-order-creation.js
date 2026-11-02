@@ -270,6 +270,7 @@ export default class CustomerPortalOrderCreationService extends Service {
                 sku: null,
                 type: null,
                 description: null,
+                quantity: 1,
                 weight: null,
                 weight_unit: 'kg',
                 length: null,

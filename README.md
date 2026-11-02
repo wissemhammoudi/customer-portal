@@ -53,6 +53,24 @@ production activation or Express release.
 
 ## Features
 
+### Saved parcel templates (Colab Express deployment)
+
+In **New order > Items > Saved parcels**, customers can reuse their private
+parcel templates from either the portal or Customer mobile. Complete an item
+and choose **Save as parcel template**; choose a per-order quantity when adding
+it back. Templates contain name, description, contents category, packaging,
+weight and dimensions, normalized to kg/cm. Editing/deleting a template never
+changes existing order/draft copies. Adding a saved parcel uses the standard
+draft payload setter, invalidating stale service quotes.
+
+The host application supplies authenticated `GET/POST saved-parcels` and
+`PUT/DELETE saved-parcels/{id}` endpoints in `customer-portal/int/v1`.
+Company/account scope comes from the authenticated account, never request input.
+Deploy the host controller and migration
+`2026_11_02_000001_create_customer_parcel_templates.php`, then rebuild the Console
+and Customer mobile app. The library supports pagination and explicit load/save
+errors. No inventory, SKU, price, quantity or order-reference storage is added.
+
 ### Invoice PDFs (Colab Express deployment)
 
 Billing lists regular order/payment Ledger invoices, without a COD fee-invoice

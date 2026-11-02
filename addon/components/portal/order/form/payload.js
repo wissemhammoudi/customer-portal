@@ -1,9 +1,14 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 
 export default class PortalOrderFormPayloadComponent extends Component {
     @service customerPortalOrderCreation;
+    @service fetch;
+    @service notifications;
+    @tracked parcelRevision = 0;
+    @tracked savingParcel = false;
 
     entityTypes = [
         { label: 'Entity', value: 'entity', description: 'Standard generic entity representing an item.' },
@@ -53,6 +58,45 @@ export default class PortalOrderFormPayloadComponent extends Component {
 
     @action addEntity() {
         this.customerPortalOrderCreation.addEntity();
+    }
+
+    @action addSavedParcel(parcel) {
+        const entities = this.args.draft?.payload?.entities ?? [];
+        if (entities.length >= 20) return this.notifications.warning('You can add up to 20 parcel lines per order.');
+        const onlyEmpty =
+            entities.length === 1 &&
+            !entities[0].meta?.parcel?.category &&
+            [null, undefined, 1, '1'].includes(entities[0].quantity) &&
+            ['name', 'description', 'sku', 'type', 'weight', 'length', 'width', 'height'].every((field) => [null, undefined, ''].includes(entities[0][field]));
+        this.customerPortalOrderCreation.setPayloadField('entities', [...(onlyEmpty ? [] : entities), structuredClone(parcel)]);
+    }
+
+    @action async saveParcel(entity) {
+        if (this.savingParcel) return;
+        this.savingParcel = true;
+        try {
+            await this.fetch.post(
+                'saved-parcels',
+                {
+                    name: entity.name,
+                    description: entity.description,
+                    weight: entity.weight,
+                    weight_unit: entity.weight_unit || 'kg',
+                    length: entity.length,
+                    width: entity.width,
+                    height: entity.height,
+                    dimensions_unit: entity.dimensions_unit || 'cm',
+                    meta: entity.meta,
+                },
+                { namespace: 'customer-portal/int/v1' }
+            );
+            this.parcelRevision++;
+            this.notifications.success('Parcel saved to your account.');
+        } catch (error) {
+            this.notifications.serverError(error);
+        } finally {
+            this.savingParcel = false;
+        }
     }
 
     @action setEntityValue(index, field, value) {
