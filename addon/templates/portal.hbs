@@ -59,8 +59,12 @@
                 <Layout::Sidebar::Item @route="customer-portal.portal.documents" @icon="folder-open">Documents</Layout::Sidebar::Item>
             </div>
             <div class="portal-nav-group">
-                <div class="portal-nav-label">Preferences</div>
+                <div class="portal-nav-label">Saved library</div>
+                <Layout::Sidebar::Item @route="customer-portal.portal.saved-parcels" @icon="box">Saved parcels</Layout::Sidebar::Item>
                 <Layout::Sidebar::Item @route="customer-portal.portal.address-book" @icon="address-book">Address Book</Layout::Sidebar::Item>
+            </div>
+            <div class="portal-nav-group">
+                <div class="portal-nav-label">Preferences</div>
                 <Layout::Sidebar::Item @route="customer-portal.portal.notifications" @icon="bell">Notifications</Layout::Sidebar::Item>
             </div>
             <RegistryYield @type="menu" @registry="customer-portal:sidebar" as |menuItem|>

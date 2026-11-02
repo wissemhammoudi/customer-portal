@@ -423,6 +423,15 @@ Contributions are welcome. Keep changes scoped, include tests for behavior chang
 
 When developing inside the Fleetbase monorepo, prefer `flb-package-linker` over manual `package.json`, `composer.json`, or workspace edits so local development links remain reversible.
 
+## Saved library navigation
+
+The customer sidebar groups **Saved parcels** and **Address Book** under
+**Saved library**. The standalone `/saved-parcels` page supports creating,
+editing, deleting, refreshing and filtering loaded templates without starting an
+order. The Address Book retains its existing shared saved-location CRUD.
+Both pages link to each other. The order form keeps the quick quantity-based
+parcel picker. Deploy these UI changes by rebuilding the Console.
+
 ## License
 
 Fleetbase Customer Portal is released under the GNU Affero General Public License v3.0 or later. See [LICENSE.md](LICENSE.md) for details.

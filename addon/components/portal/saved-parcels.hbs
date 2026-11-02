@@ -1,22 +1,14 @@
-<div class="portal-order-item-card space-y-3" {{did-insert this.load}} {{did-update this.load @revision}}>
-    <h3 class="font-semibold dark:text-gray-100">Saved parcels</h3>
-    <p class="text-sm text-gray-500">Private templates shared with your mobile app. Save a completed item below, then reuse it with a quantity for each order. Existing orders are never
-        changed by editing a template.</p>
-    <InputGroup @name="Quantity to add">
-        <input aria-label="Saved parcel quantity" type="number" min="1" step="1" value={{this.quantity}} class="form-input" {{on "input" this.setQuantity}} />
-    </InputGroup>
-    {{#each this.parcels as |template|}}
-        <div class="flex flex-wrap items-center gap-2">
-            <span class="font-semibold dark:text-gray-100">{{template.parcel.name}}</span>
-            <Button @text="Add to order" @size="xs" @disabled={{this.busy}} @onClick={{fn this.select template}} />
-            <Button @text="Edit saved parcel" @size="xs" @disabled={{this.busy}} @onClick={{fn this.edit template}} />
-            <Button @text="Delete saved parcel" @type="danger" @size="xs" @disabled={{this.busy}} @onClick={{fn this.remove template}} />
+<div class="portal-order-item-card space-y-4" {{did-insert this.load}} {{did-update this.load @revision}}>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <h3 class="font-semibold dark:text-gray-100">Saved parcels</h3>
+            <p class="text-sm text-gray-500">Private reusable templates shared with your mobile app. Editing or deleting a template never changes existing orders.</p>
         </div>
-    {{else}}
-        {{#unless this.loading}}<p class="text-sm text-gray-500">No saved parcels yet.</p>{{/unless}}
-    {{/each}}
+        <Button @text="New saved parcel" @icon="plus" @type="primary" @disabled={{this.busy}} @onClick={{this.create}} />
+    </div>
     {{#if this.editing}}
-        <div class="space-y-3">
+        <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+            <h4 class="font-semibold dark:text-gray-100">{{if this.editing.uuid "Edit saved parcel" "New saved parcel"}}</h4>
             <InputGroup @name="Saved parcel name">
                 <input aria-label="Saved parcel name" value={{this.editing.name}} class="form-input w-full" {{on "input" (fn this.setField "name")}} />
             </InputGroup>
@@ -24,7 +16,7 @@
                 <textarea aria-label="Saved parcel details" value={{this.editing.description}} class="form-input w-full" {{on "input" (fn this.setField "description")}}></textarea>
             </InputGroup>
             <ParcelPackaging @meta={{this.editing.meta}} @onChange={{this.setMeta}} />
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {{#each (array "weight" "length" "width" "height") as |field|}}
                     <InputGroup @name={{if (eq field "weight") "Weight (kg)" (concat field " (cm)")}}>
                         <input
@@ -39,12 +31,48 @@
                     </InputGroup>
                 {{/each}}
             </div>
-            <Button @text="Update saved parcel" @isLoading={{this.busy}} @onClick={{this.save}} />
-            <Button @text="Cancel" @disabled={{this.busy}} @onClick={{this.cancel}} />
+            <div class="flex flex-wrap gap-2">
+                <Button @text={{if this.editing.uuid "Update saved parcel" "Save parcel"}} @type="primary" @isLoading={{this.busy}} @onClick={{this.save}} />
+                <Button @text="Cancel" @disabled={{this.busy}} @onClick={{this.cancel}} />
+            </div>
         </div>
     {{/if}}
+    <InputGroup @name="Filter loaded parcels">
+        <input aria-label="Filter loaded parcels" type="search" value={{this.query}} class="form-input w-full" {{on "input" this.setQuery}} />
+    </InputGroup>
+    {{#if @onSelect}}
+        <InputGroup @name="Quantity to add">
+            <input aria-label="Saved parcel quantity" type="number" min="1" step="1" value={{this.quantity}} class="form-input" {{on "input" this.setQuantity}} />
+        </InputGroup>
+    {{/if}}
+    <div class="grid grid-cols-1 gap-3">
+        {{#each this.filteredParcels as |template|}}
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3" data-test-saved-parcel>
+                <div>
+                    <div class="font-semibold dark:text-gray-100">{{template.parcel.name}}</div>
+                    {{#if template.parcel.description}}<p class="text-sm text-gray-500">{{template.parcel.description}}</p>{{/if}}
+                    <p class="text-sm text-gray-500">{{humanize template.parcel.meta.parcel.category}} · {{humanize template.parcel.meta.parcel.packaging_type}}</p>
+                    {{#if template.parcel.weight}}<p class="text-sm text-gray-500">{{template.parcel.weight}} kg</p>{{/if}}
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    {{#if @onSelect}}<Button @text="Add to order" @icon="plus" @size="xs" @disabled={{this.busy}} @onClick={{fn this.select template}} />{{/if}}
+                    <Button @text="Edit saved parcel" @icon="pencil" @size="xs" @disabled={{this.busy}} @onClick={{fn this.edit template}} />
+                    <Button @text="Delete saved parcel" @icon="trash" @type="danger" @size="xs" @disabled={{this.busy}} @onClick={{fn this.remove template}} />
+                </div>
+            </div>
+        {{else}}
+            {{#unless this.loading}}
+                <div class="portal-empty-state">
+                    <div class="portal-empty-state-title">{{if this.query "No matching loaded parcels" "No saved parcels yet."}}</div>
+                    <p>Create a template with a name, category and packaging. You can choose its quantity when adding it to an order.</p>
+                </div>
+            {{/unless}}
+        {{/each}}
+    </div>
     {{#if this.loading}}<p role="status">Loading saved parcels...</p>{{/if}}
     {{#if this.error}}<p role="alert">Saved parcels could not be loaded. Retry below.</p>{{/if}}
-    {{#if this.nextPage}}<Button @text="More saved parcels" @disabled={{this.loading}} @onClick={{this.more}} />{{/if}}
-    <Button @text="Refresh saved parcels" @disabled={{this.loading}} @onClick={{this.load}} />
+    <div class="flex flex-wrap gap-2">
+        {{#if this.nextPage}}<Button @text="More saved parcels" @disabled={{this.loading}} @onClick={{this.more}} />{{/if}}
+        <Button @text="Refresh saved parcels" @disabled={{this.loading}} @onClick={{this.load}} />
+    </div>
 </div>

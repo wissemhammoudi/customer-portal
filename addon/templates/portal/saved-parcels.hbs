@@ -1,0 +1,13 @@
+<Portal::ContentWrapper class="portal-page-card">
+    <div class="portal-section-header">
+        <div>
+            <div class="portal-section-eyebrow">Saved library</div>
+            <h1>Saved parcels</h1>
+            <p>Add, edit and organize your parcel templates without starting an order.</p>
+        </div>
+        <LinkTo @route="portal.address-book" class="btn">Manage saved addresses</LinkTo>
+    </div>
+    <div class="mt-5">
+        <Portal::SavedParcels />
+    </div>
+</Portal::ContentWrapper>

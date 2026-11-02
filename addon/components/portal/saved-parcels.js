@@ -15,6 +15,20 @@ export default class PortalSavedParcelsComponent extends Component {
     @tracked error = null;
     @tracked quantity = '1';
     @tracked editing = null;
+    @tracked query = '';
+
+    get filteredParcels() {
+        const query = this.query.trim().toLocaleLowerCase();
+        return this.parcels.filter(({ parcel }) => `${parcel.name ?? ''} ${parcel.description ?? ''}`.toLocaleLowerCase().includes(query));
+    }
+
+    @action setQuery(event) {
+        this.query = event.target.value;
+    }
+
+    @action create() {
+        this.editing = { name: '', weight_unit: 'kg', dimensions_unit: 'cm' };
+    }
 
     @action async load() {
         this.loading = true;
@@ -81,9 +95,17 @@ export default class PortalSavedParcelsComponent extends Component {
         this.busy = true;
         try {
             const { uuid, ...parcel } = this.editing;
-            await this.fetch.put(`saved-parcels/${encodeURIComponent(uuid)}`, parcel, API);
+            if (!parcel.name?.trim()) {
+                this.notifications.warning('Enter a parcel name.');
+                return;
+            }
+            if (uuid) {
+                await this.fetch.put(`saved-parcels/${encodeURIComponent(uuid)}`, parcel, API);
+            } else {
+                await this.fetch.post('saved-parcels', parcel, API);
+            }
             this.editing = null;
-            this.notifications.success('Saved parcel updated.');
+            this.notifications.success(uuid ? 'Saved parcel updated.' : 'Saved parcel created.');
             await this.load();
         } catch (error) {
             this.notifications.serverError(error);
@@ -97,6 +119,7 @@ export default class PortalSavedParcelsComponent extends Component {
         this.busy = true;
         try {
             await this.fetch.delete(`saved-parcels/${encodeURIComponent(template.uuid)}`, {}, API);
+            if (this.editing?.uuid === template.uuid) this.editing = null;
             this.notifications.success('Saved parcel deleted.');
             await this.load();
         } catch (error) {

@@ -27,6 +27,7 @@ export default buildRoutes(function () {
         });
         this.route('documents');
         this.route('address-book');
+        this.route('saved-parcels');
         this.route('notifications');
         this.route('settings', function () {
             this.route('account');

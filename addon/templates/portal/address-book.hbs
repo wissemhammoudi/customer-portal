@@ -5,7 +5,10 @@
             <h1>Address Book</h1>
             <p>Manage pickup, dropoff, billing, and recurring delivery locations for this customer account.</p>
         </div>
-        <Button @type="primary" @icon="plus" @text="New Place" @onClick={{this.createPlace}} @wrapperClass="portal-order-panel-action-button" />
+        <div class="flex flex-wrap gap-2">
+            <LinkTo @route="portal.saved-parcels" class="btn">Manage saved parcels</LinkTo>
+            <Button @type="primary" @icon="plus" @text="New Place" @onClick={{this.createPlace}} @wrapperClass="portal-order-panel-action-button" />
+        </div>
     </div>
 
     <div class="portal-table-panel mt-5">
