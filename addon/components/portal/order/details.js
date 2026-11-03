@@ -20,10 +20,6 @@ export default class PortalOrderDetailsComponent extends Component {
         return this.order && !CLOSED_STATUSES.includes(valueFor(this.order, 'status'));
     }
 
-    get canReschedule() {
-        return this.canModify && !valueFor(this.order, 'meta.collection_workflow');
-    }
-
     get canReturn() {
         return Boolean(this.order && !CANCELLED_STATUSES.includes(valueFor(this.order, 'status')) && valueFor(this.order, 'payload.pickup') && valueFor(this.order, 'payload.dropoff'));
     }
@@ -74,15 +70,6 @@ export default class PortalOrderDetailsComponent extends Component {
                         separator: true,
                     },
                     {
-                        text: 'Reschedule',
-                        icon: 'calendar',
-                        disabled: !this.canReschedule,
-                        fn: this.openRescheduleModal,
-                    },
-                    {
-                        separator: true,
-                    },
-                    {
                         text: 'Cancel Order',
                         icon: 'ban',
                         class: 'text-danger',
@@ -115,21 +102,6 @@ export default class PortalOrderDetailsComponent extends Component {
         });
     }
 
-    @action openRescheduleModal() {
-        const reschedule = {
-            scheduled_at: this.order?.scheduled_at,
-        };
-
-        this.modalsManager.show('modals/portal-order-reschedule', {
-            title: 'Reschedule Order',
-            modalClass: 'modal-md',
-            acceptButtonText: 'Reschedule',
-            declineButtonText: 'Cancel',
-            reschedule,
-            confirm: () => this.rescheduleOrder(reschedule.scheduled_at),
-        });
-    }
-
     @action async confirmCancelOrder() {
         await this.modalsManager.confirm({
             title: 'Cancel this order?',
@@ -144,20 +116,6 @@ export default class PortalOrderDetailsComponent extends Component {
         try {
             this.order = await this.customerPortalOrderActions.cancelOrder.perform(this.order);
             this.notifications.success('Order canceled.');
-        } catch (error) {
-            this.notifications.serverError(error);
-        }
-    }
-
-    @action async rescheduleOrder(scheduledAt) {
-        if (!scheduledAt) {
-            this.notifications.warning('Choose a new delivery time before rescheduling.');
-            return;
-        }
-
-        try {
-            this.order = await this.customerPortalOrderActions.rescheduleOrder.perform(this.order, scheduledAt);
-            this.notifications.success('Order rescheduled.');
         } catch (error) {
             this.notifications.serverError(error);
         }

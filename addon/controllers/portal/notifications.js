@@ -50,6 +50,7 @@ const PREFERENCE_GROUPS = [
 export default class PortalNotificationsController extends Controller {
     @service fetch;
     @service notifications;
+    @service intl;
 
     @tracked preferences = { ...DEFAULT_PREFERENCES };
 
@@ -62,6 +63,7 @@ export default class PortalNotificationsController extends Controller {
         return PREFERENCE_GROUPS.map((group) => {
             return {
                 ...group,
+                title: group.title === 'Billing' ? this.intl.t('customer-finances.title') : group.title,
                 items: group.keys.map((key) => {
                     return {
                         key,

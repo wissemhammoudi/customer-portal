@@ -4,6 +4,8 @@
         {{#if @payout.receipt}}<p>{{@payout.receipt.signer_name}} · {{@payout.receipt.signed_at}}</p>{{/if}}
         <button type="button" class="btn btn-default btn-sm" disabled={{this.busy}} {{on "click" (fn this.open false)}}>View signed receipt</button>
         <button type="button" class="btn btn-default btn-sm" disabled={{this.busy}} {{on "click" (fn this.open true)}}>Download signed receipt</button>
+    {{else if @payout.is_reversed}}
+        <p>{{t "customer-finances.reversed"}}</p>
     {{else if this.bankPaid}}
         <p>Bank transfer recorded by staff. No cash receipt signature applies.</p>
     {{else if this.canSign}}

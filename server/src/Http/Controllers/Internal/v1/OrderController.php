@@ -71,10 +71,12 @@ class OrderController extends Controller
 
     public function createOrder(Request $request)
     {
+        $request->validate(['scheduled_at' => 'prohibited', 'internal_id' => 'prohibited']);
         return (new Order())->getConnection()->transaction(function () use ($request) {
             $drafts = new PortalCheckoutDraftService();
             $context = $this->accountResolver->resolve();
             $id = $request->input('checkout_draft_uuid');
+            $draft = null;
             $request->validate(['checkout_draft_uuid' => 'nullable|uuid']);
             if ($id) {
                 $draft = $drafts->find($id, $context, true);
@@ -86,7 +88,7 @@ class OrderController extends Controller
                     return response()->json(['order' => $this->orderDetailsResponse($order)]);
                 }
             }
-            $response = $this->createOrderInTransaction($request);
+            $response = $this->createOrderInTransaction($request, $draft);
             if ($id) {
                 $uuid = data_get($response->getData(true), 'order.uuid');
                 abort_if(!$uuid, 500, 'The created order could not be linked to its checkout draft.');
@@ -103,19 +105,19 @@ class OrderController extends Controller
 
     public function collectionReadiness(string $id)
     {
-        $input = request()->validate(['pickup_date' => 'sometimes|date_format:Y-m-d']);
+        request()->validate(['pickup_date' => 'prohibited']);
         $order = $this->orderService->resolveOrder($id, $this->accountResolver->resolve());
-        return response()->json(['collection' => CollectionReadiness::preview($order, $input['pickup_date'] ?? null)]);
+        return response()->json(['collection' => CollectionReadiness::preview($order)]);
     }
 
     public function updateCollectionReadiness(Request $request, string $id)
     {
         $request->validate(['ready' => 'required|boolean', 'confirmation_token' => 'nullable|string|size:64',
-            'pickup_start' => 'nullable|date_format:Y-m-d\TH:i:s.u\Z']);
+            'pickup_start' => 'prohibited']);
         abort_unless(session('user'), 403, 'An authenticated customer is required.');
         return (new Order())->getConnection()->transaction(function () use ($request, $id) {
             $order = $this->orderService->resolveOrder($id, $this->accountResolver->resolve(), true);
-            $order->recordCollectionReadiness($request->boolean('ready'), $request->input('confirmation_token'), $request->input('pickup_start'));
+            $order->recordCollectionReadiness($request->boolean('ready'), $request->input('confirmation_token'));
             if ($order->isDirty()) {
                 $order->save();
             }
@@ -144,7 +146,7 @@ class OrderController extends Controller
         return response()->json(['draft' => $drafts->response($drafts->find($id, $this->accountResolver->resolve()))]);
     }
 
-    protected function createOrderInTransaction(Request $request)
+    protected function createOrderInTransaction(Request $request, ?object $checkoutDraft = null)
     {
         $context = $this->accountResolver->resolve();
         $this->orderService->validateNewOrder($request, $context);
@@ -158,7 +160,7 @@ class OrderController extends Controller
         $request->validate([
             'type'                       => 'nullable|string',
             'order_config'               => 'nullable',
-            'scheduled_at'               => 'nullable|date',
+            'scheduled_at'               => 'prohibited',
             'notes'                      => 'nullable|string',
             'meta'                       => 'nullable|array',
             'payload'                    => 'nullable',
@@ -210,7 +212,10 @@ class OrderController extends Controller
             }
             $fingerprint = data_get($quote->meta, 'customer_portal.delivery_fingerprint');
             if ($fingerprint || $request->has('meta.delivery')) {
-                abort_if(!is_string($fingerprint) || !hash_equals($fingerprint, $deliveryFingerprint), 422, 'The delivery details changed. Get a new service quote before creating this order.');
+                $matches = is_string($fingerprint) && (hash_equals($fingerprint, $deliveryFingerprint)
+                    || ($checkoutDraft && $purchaseRate && data_get($purchaseRate->meta, 'stripe_checkout_session_id')
+                        && (new PortalCheckoutDraftService())->matchesRetiredScheduleFingerprint($request->all(), $checkoutDraft, $fingerprint)));
+                abort_unless($matches, 422, 'The delivery details changed. Get a new service quote before creating this order.');
             }
             $routeFingerprint = data_get($quote->meta, 'customer_portal.resolved_route_fingerprint');
             if ($routeFingerprint) {
@@ -287,9 +292,9 @@ class OrderController extends Controller
             'order_config_uuid'  => $orderConfig->uuid,
             'type'               => $orderConfig->key,
             'status'             => 'created',
-            'scheduled_at'       => $request->input('scheduled_at'),
+            'scheduled_at'       => null,
             'notes'              => $request->input('notes'),
-            'internal_id'        => $request->input('internal_id'),
+            'internal_id'        => null,
             'pod_required'       => $request->boolean('pod_required'),
             'pod_method'         => $request->input('pod_method'),
             'meta'               => $meta,
@@ -617,20 +622,8 @@ class OrderController extends Controller
 
     public function rescheduleOrder(Request $request, string $id)
     {
-        $request->validate(['scheduled_at' => 'required|date']);
-
-        $context = $this->accountResolver->resolve();
-        $order   = $this->orderService->resolveOrder($id, $context);
-        abort_if(CollectionWorkflow::applies($order), 409, 'Collection dates follow the collection calendar. Contact operations for order or schedule changes.');
-
-        abort_if(in_array($order->status, ['completed', 'done', 'canceled', 'cancelled']), 422, 'This order can no longer be rescheduled.');
-
-        $order->update(['scheduled_at' => $request->input('scheduled_at')]);
-        $request->merge(['with_tracker_data' => true, 'with_eta' => true]);
-
-        return response()->json([
-            'order' => $this->orderDetailsResponse($order->fresh()),
-        ]);
+        $this->orderService->resolveOrder($id, $this->accountResolver->resolve());
+        abort(409, 'Delivery and pickup dates are organized by the dispatcher. Contact support for changes.');
     }
 
     public function deleteFile(Request $request, string $id, string $file)

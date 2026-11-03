@@ -14,11 +14,6 @@ export default class PortalOrderFormDetailsComponent extends Component {
         return (this.deliveryOptions.catalogue?.service_levels ?? [{ value: 'standard' }]).filter((item) => item.value === 'standard' && item.available !== false).map((item) => item.value);
     }
 
-    get invalidSchedule() {
-        const date = this.args.draft?.scheduledAt;
-        return Boolean(date && (!Number.isFinite(Date.parse(date)) || Date.parse(date) <= Date.now()));
-    }
-
     @action setPurpose(purpose) {
         this.customerPortalOrderCreation.setPurpose(purpose);
     }

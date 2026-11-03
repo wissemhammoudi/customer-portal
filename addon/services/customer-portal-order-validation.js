@@ -32,7 +32,6 @@ export default class CustomerPortalOrderValidationService extends Service {
         if ((required && (!this.deliveryOptions.catalogue || !entities.length)) || !entities.every((entity) => this.deliveryOptions.isValidEntity(entity, required))) {
             return false;
         }
-        if (draft.scheduledAt && (!Number.isFinite(Date.parse(draft.scheduledAt)) || Date.parse(draft.scheduledAt) <= Date.now())) return false;
         if (draft.podRequired && !['scan', 'signature', 'photo'].includes(draft.podMethod)) return false;
         const payload = draft.payload ?? {};
         if (

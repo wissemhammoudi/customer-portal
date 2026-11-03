@@ -23,12 +23,7 @@
                 <InfoBlock @text="Express is not currently available. Choose Standard to request a quote." />
             {{/if}}
         </InputGroup>
-        <InputGroup @name="Scheduled At (optional)" @helpText="Leave blank for an unscheduled delivery. Select a future date and time.">
-            <input value={{@draft.scheduledAt}} type="datetime-local" class="form-input w-full" {{on "input" (fn this.setInput "scheduledAt")}} />
-        </InputGroup>
-        {{#if this.invalidSchedule}}
-            <InfoBlock @text="Choose a valid future date and time, or clear the schedule." />
-        {{/if}}
+        <p>Pickup and delivery dates are organized by Colab Express after your parcels are confirmed ready.</p>
         <InputGroup>
             <Toggle @label="Allow opening at delivery" @isToggled={{@draft.meta.delivery.opening_allowed}} @onToggle={{this.toggleOpening}} />
         </InputGroup>

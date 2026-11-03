@@ -8,7 +8,7 @@
             <h3 class="font-semibold">{{notification.data.subject}}</h3>
             <p>{{notification.data.message}}</p>
             <p>{{notification.created_at}}</p>
-            {{#if notification.data.payout_uuid}}<LinkTo @route="portal.wallet">View wallet</LinkTo>{{/if}}
+            {{#if notification.data.payout_uuid}}<LinkTo @route="portal.billing">{{t "customer-finances.title"}}</LinkTo>{{/if}}
             {{#unless notification.read_at}}
                 <Button @text="Mark read" @onClick={{perform this.read notification.id}} @disabled={{or this.read.isRunning this.load.isRunning}} />
             {{/unless}}

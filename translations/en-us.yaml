@@ -1,2 +1,47 @@
 starter:
   extension-name: Starter
+customer-finances:
+  title: Invoices
+  summary: Financial overview
+  explanation: Recorded COD collections, delivery fees and settlements. This is not your business profit.
+  collected: COD collected
+  delivery-fees: Delivery fees
+  vat: VAT
+  net-earned: Net earned
+  pending: Pending driver remittance
+  paid-out: Already paid
+  reserved: Pending settlements
+  remaining-due: Remaining due
+  available: Available for settlement
+  orders: Order financial details
+  payments: Settlements and legacy requests
+  fee-invoices: Delivery fee invoices
+  regular-invoices: Order invoices
+  refresh: Refresh
+  loading: Loading financial information...
+  period: Order period (YYYY-MM, blank for all)
+  filter: Apply period
+  previous: Previous
+  next: Next
+  empty-orders: No recorded collections for this period.
+  empty-payments: No settlements recorded.
+  empty-invoices: No invoices available.
+  order: Order
+  status: Status
+  date: Date
+  amount: Amount
+  method: Method
+  reference: Payment reference
+  receipt: Receipt
+  remittance: Driver remittance
+  bank-transfer: Bank transfer
+  office-cash: Cash at office
+  page: "Page {page} of {pages} ({total} orders)"
+  error: Could not load financial information. Refresh before relying on the balances.
+  pending-help: Pending driver cash is not yet available for settlement. Existing pending payments remain reserved.
+  fees-help: These invoices document delivery fees already deducted from COD. Do not deduct them again.
+  all-time: Summary and payment history cover all time; the period filter applies to order details only.
+  invalid-period: Enter a valid period in YYYY-MM format.
+  reversed: Reversed
+  due: Due date
+  balance: Invoice balance

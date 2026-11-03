@@ -57,7 +57,6 @@ export default class CustomerPortalOrderCreationService extends Service {
             },
             podRequired: false,
             podMethod: null,
-            scheduledAt: null,
             notes: null,
             serviceQuote: null,
             serviceRates: [],
@@ -139,8 +138,6 @@ export default class CustomerPortalOrderCreationService extends Service {
             checkoutDraftUuid: saved.uuid,
             meta: input.meta,
             notes: input.notes,
-            internalId: input.internal_id,
-            scheduledAt: input.scheduled_at,
             podRequired: input.pod_required,
             podMethod: input.pod_method,
             returnAddressesConfirmed: input.return_addresses_confirmed === true,
@@ -328,7 +325,7 @@ export default class CustomerPortalOrderCreationService extends Service {
     }
 
     invalidateQuotesForField(field) {
-        if (['orderConfig', 'scheduledAt', 'pickup', 'dropoff', 'return', 'waypoints', 'entities', 'meta', 'cod_amount', 'cod_currency', 'cod_payment_method'].includes(field)) {
+        if (['orderConfig', 'pickup', 'dropoff', 'return', 'waypoints', 'entities', 'meta', 'cod_amount', 'cod_currency', 'cod_payment_method'].includes(field)) {
             this.invalidateServiceQuotes();
         }
     }

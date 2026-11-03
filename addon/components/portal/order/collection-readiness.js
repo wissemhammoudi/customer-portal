@@ -10,19 +10,6 @@ export default class PortalOrderCollectionReadinessComponent extends Component {
     @service notifications;
     @service modalsManager;
     @tracked preview = null;
-    @tracked pickupStart = '';
-
-    get needsSlot() {
-        return !this.preview?.pickup_slots?.length || !this.pickupStart;
-    }
-
-    @action selectSlot(event) {
-        this.pickupStart = event.target.value;
-    }
-
-    @action selectDate(event) {
-        this.review.perform(event.target.value);
-    }
 
     get workflow() {
         return valueFor(this.args.order, 'meta.collection_workflow');
@@ -55,16 +42,15 @@ export default class PortalOrderCollectionReadinessComponent extends Component {
     }
 
     get plannedPickup() {
-        const planned = this.preview?.planned_collection_at ?? this.workflow?.planned_collection_at;
-        const timezone = this.preview?.timezone ?? this.workflow?.timezone ?? 'Africa/Tunis';
+        const planned = this.workflow?.collection_round_uuid ? this.workflow?.planned_collection_at : null;
+        const timezone = this.workflow?.timezone ?? 'Africa/Tunis';
         return planned ? `${new Date(planned).toLocaleString(undefined, { timeZone: timezone })} (${timezone})` : null;
     }
 
-    @dropTask *review(date) {
+    @dropTask *review() {
         this.preview = null;
-        this.pickupStart = '';
         try {
-            this.preview = yield this.customerPortalOrderActions.collectionReadiness(this.args.order, typeof date === 'string' ? date : undefined);
+            this.preview = yield this.customerPortalOrderActions.collectionReadiness(this.args.order);
         } catch (error) {
             this.notifications.serverError(error);
         }
@@ -76,13 +62,8 @@ export default class PortalOrderCollectionReadinessComponent extends Component {
 
     @dropTask *confirm(ready) {
         try {
-            if (ready && this.needsSlot) throw new Error('Select a pickup window before confirming readiness.');
-            const order = yield this.customerPortalOrderActions.setCollectionReadiness(
-                this.args.order,
-                ready,
-                ready ? this.preview?.confirmation_token : this.workflow?.confirmation_token,
-                ready ? this.pickupStart || undefined : undefined
-            );
+            if (ready && !this.preview?.confirmation_token) throw new Error('Review the current parcels before confirming readiness.');
+            const order = yield this.customerPortalOrderActions.setCollectionReadiness(this.args.order, ready, ready ? this.preview?.confirmation_token : this.workflow?.confirmation_token);
             this.preview = null;
             this.args.onChanged(order);
             this.notifications.success(ready ? 'Order is ready for pickup.' : 'Readiness withdrawn. Mark the order ready again after preparation.');

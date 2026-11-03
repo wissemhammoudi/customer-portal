@@ -114,21 +114,17 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
         return yield this.fetch.post(`orders/${this.identifier(order)}/cancel`, {}, normalizeOptions('order'));
     }
 
-    async collectionReadiness(order, pickupDate) {
-        const response = await this.fetch.get(`orders/${encodeURIComponent(this.identifier(order))}/collection-readiness`, pickupDate ? { pickup_date: pickupDate } : {}, { namespace: NAMESPACE });
+    async collectionReadiness(order) {
+        const response = await this.fetch.get(`orders/${encodeURIComponent(this.identifier(order))}/collection-readiness`, {}, { namespace: NAMESPACE });
         return response.collection;
     }
 
-    setCollectionReadiness(order, ready, confirmationToken, pickupStart) {
+    setCollectionReadiness(order, ready, confirmationToken) {
         return this.fetch.post(
             `orders/${encodeURIComponent(this.identifier(order))}/collection-readiness`,
-            { ready, ...(confirmationToken ? { confirmation_token: confirmationToken } : {}), ...(pickupStart ? { pickup_start: pickupStart } : {}) },
+            { ready, ...(confirmationToken ? { confirmation_token: confirmationToken } : {}) },
             normalizeOptions('order')
         );
-    }
-
-    @task *rescheduleOrder(order, scheduledAt) {
-        return yield this.fetch.post(`orders/${this.identifier(order)}/reschedule`, { scheduled_at: scheduledAt }, normalizeOptions('order'));
     }
 
     identifier(order) {
@@ -142,9 +138,7 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
         return {
             order_config: draft.orderConfig?.id ?? draft.orderConfig?.public_id ?? draft.orderConfig?.uuid,
             type: draft.orderConfig?.key,
-            scheduled_at: draft.scheduledAt,
             notes: draft.notes,
-            internal_id: draft.internalId,
             checkout_draft_uuid: draft.checkoutDraftUuid,
             return_addresses_confirmed: draft.returnAddressesConfirmed,
             meta: draft.meta,
@@ -191,7 +185,6 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
             },
             service: 'all',
             service_type: draft.orderConfig?.key,
-            scheduled_at: draft.scheduledAt,
             is_route_optimized: true,
             pod_required: draft.podRequired,
             pod_method: draft.podMethod,

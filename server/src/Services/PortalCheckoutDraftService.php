@@ -30,7 +30,7 @@ class PortalCheckoutDraftService
     public function save(array $input, array $context, ?string $id = null): object
     {
         $input = Arr::only($input, ['order_config', 'type', 'pickup', 'dropoff', 'return', 'waypoints', 'entities',
-            'cod_amount', 'cod_currency', 'cod_payment_method', 'scheduled_at', 'notes', 'internal_id', 'meta',
+            'cod_amount', 'cod_currency', 'cod_payment_method', 'notes', 'meta',
             'pod_required', 'pod_method', 'files', 'service_quote_uuid', 'return_addresses_confirmed']);
         DeliveryOptions::validateInput($input);
         $json = json_encode($input, JSON_THROW_ON_ERROR);
@@ -58,5 +58,17 @@ class PortalCheckoutDraftService
     {
         return ['uuid' => $draft->uuid, 'input' => json_decode($draft->input, true, 512, JSON_THROW_ON_ERROR),
             'order_uuid' => $draft->order_uuid, 'expires_at' => $draft->expires_at];
+    }
+
+    public function matchesRetiredScheduleFingerprint(array $input, object $draft, string $fingerprint): bool
+    {
+        $saved = $this->response($draft)['input'];
+        $scheduledAt = $saved['scheduled_at'] ?? null;
+        if (!is_string($scheduledAt) || $scheduledAt === '') {
+            return false;
+        }
+        // Only the date stored in the locked customer draft may be ignored on a paid legacy checkout.
+        $input['scheduled_at'] = $scheduledAt;
+        return hash_equals($fingerprint, DeliveryOptions::fingerprint($input));
     }
 }

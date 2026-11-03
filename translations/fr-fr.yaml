@@ -1,0 +1,45 @@
+customer-finances:
+  title: Factures
+  summary: Situation financiere
+  explanation: Encaissements COD, frais de livraison et reglements comptabilises. Ce n'est pas le benefice de votre entreprise.
+  collected: COD encaisse
+  delivery-fees: Frais de livraison
+  vat: TVA
+  net-earned: Net acquis
+  pending: En attente de remise chauffeur
+  paid-out: Deja verse
+  reserved: Reglements en attente
+  remaining-due: Reste a recevoir
+  available: Disponible pour reglement
+  orders: Detail financier des commandes
+  payments: Reglements et anciennes demandes
+  fee-invoices: Factures de frais de livraison
+  regular-invoices: Factures de commandes
+  refresh: Actualiser
+  loading: Chargement des informations financieres...
+  period: Periode des commandes (AAAA-MM, vide pour toutes)
+  filter: Filtrer
+  previous: Precedent
+  next: Suivant
+  empty-orders: Aucun encaissement comptabilise pour cette periode.
+  empty-payments: Aucun reglement enregistre.
+  empty-invoices: Aucune facture disponible.
+  order: Commande
+  status: Statut
+  date: Date
+  amount: Montant
+  method: Methode
+  reference: Reference de paiement
+  receipt: Recu
+  remittance: Remise chauffeur
+  bank-transfer: Virement bancaire
+  office-cash: Especes au bureau
+  page: "Page {page} sur {pages} ({total} commandes)"
+  error: Impossible de charger les informations financieres. Actualisez avant de vous fier aux soldes.
+  pending-help: Les especes encore chez le chauffeur ne sont pas disponibles pour reglement. Les paiements en attente restent reserves.
+  fees-help: Ces factures justifient les frais deja deduits du COD. Ne les deduisez pas une seconde fois.
+  all-time: Les totaux et reglements couvrent tout l'historique ; le filtre de periode concerne uniquement les commandes.
+  invalid-period: Saisissez une periode valide au format AAAA-MM.
+  reversed: Annule
+  due: Echeance
+  balance: Solde de la facture

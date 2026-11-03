@@ -9,11 +9,15 @@ const API = { namespace: 'customer-portal/int/v1' };
 export default class PortalWalletComponent extends Component {
     @service fetch;
     @service notifications;
-    @tracked data;
-    @tracked amount = '';
-    @tracked method = 'bank_transfer';
-    @tracked rib = '';
+    @service intl;
+    @tracked data = null;
+    @tracked invoices = [];
+    @tracked feeInvoices = [];
     @tracked error = '';
+    @tracked period = '';
+    @tracked selectedPeriod = '';
+    @tracked orderPage = 1;
+    @tracked paymentPage = 1;
 
     constructor() {
         super(...arguments);
@@ -21,75 +25,86 @@ export default class PortalWalletComponent extends Component {
     }
 
     money(amount) {
-        return new Intl.NumberFormat(undefined, { style: 'currency', currency: this.data.wallet.currency, minimumFractionDigits: 3 }).format(amount / 1000);
+        return new Intl.NumberFormat(this.intl.primaryLocale, { style: 'currency', currency: this.data.finance.currency, minimumFractionDigits: 3 }).format(amount / 1000);
     }
 
     get balances() {
         if (!this.data) return [];
         return [
-            ['Available to withdraw', 'available'],
-            ['Pending driver cash', 'pending'],
-            ['Reserved for payouts', 'reserved'],
-            ['Already paid out', 'paid_out'],
-        ].map(([label, key]) => ({ label, amount: this.money(this.data.wallet[key]) }));
+            ['collected', 'gross'],
+            ['delivery-fees', 'fee'],
+            ['vat', 'vat'],
+            ['net-earned', 'net'],
+            ['pending', 'driver_pending'],
+            ['paid-out', 'paid_out'],
+            ['reserved', 'reserved'],
+            ['remaining-due', 'remaining_due'],
+            ['available', 'available'],
+        ].map(([label, key]) => ({ key, label: this.intl.t(`customer-finances.${label}`), amount: this.money(this.data.finance[key]) }));
     }
 
-    get minimum() {
-        return this.data ? this.money(this.data.wallet.minimum_payout) : '';
-    }
-
-    get payouts() {
-        return (this.data?.payouts ?? []).map((payout) => ({
-            ...payout,
-            formattedAmount: this.money(payout.amount),
-            methodLabel: payout.method === 'bank_transfer' ? 'Bank transfer' : 'Cash at office',
+    get orders() {
+        return (this.data?.orders.data ?? []).map((order) => ({
+            ...order,
+            grossDisplay: this.money(order.gross),
+            feeDisplay: this.money(order.fee),
+            vatDisplay: this.money(order.vat),
+            netDisplay: this.money(order.net),
         }));
     }
 
-    @action setMethod(event) {
-        this.method = event.target.value;
+    get payouts() {
+        return (this.data?.payments.data ?? []).map((payment) => ({
+            ...payment,
+            formattedAmount: this.money(payment.amount),
+            methodLabel: this.intl.t(`customer-finances.${payment.method === 'bank_transfer' ? 'bank-transfer' : 'office-cash'}`),
+        }));
     }
 
-    @action submitForm(event) {
-        event.preventDefault();
-        this.submit.perform();
+    get firstOrderPage() {
+        return !this.data || this.data.orders.page <= 1;
+    }
+    get lastOrderPage() {
+        return !this.data || this.data.orders.page >= this.data.orders.last_page;
+    }
+    get firstPaymentPage() {
+        return !this.data || this.data.payments.page <= 1;
+    }
+    get lastPaymentPage() {
+        return !this.data || this.data.payments.page >= this.data.payments.last_page;
+    }
+
+    @action applyPeriod() {
+        if (this.period && !/^\d{4}-(0[1-9]|1[0-2])$/.test(this.period.trim())) {
+            this.error = this.intl.t('customer-finances.invalid-period');
+            return;
+        }
+        this.selectedPeriod = this.period.trim();
+        this.orderPage = 1;
+        this.load.perform();
+    }
+
+    @action page(kind, offset) {
+        if (kind === 'orders') this.orderPage += offset;
+        else this.paymentPage += offset;
+        this.load.perform();
     }
 
     @dropTask *load() {
         this.error = '';
+        this.data = null;
         try {
-            this.data = yield this.fetch.get('wallet', {}, API);
+            const [data, invoices, feeInvoices] = yield Promise.all([
+                this.fetch.get('wallet', { page: this.orderPage, payments_page: this.paymentPage, ...(this.selectedPeriod ? { period: this.selectedPeriod } : {}) }, API),
+                this.fetch.get('invoices', {}, API),
+                this.fetch.get('wallet/invoices', {}, API),
+            ]);
+            if (!data.finance || !data.orders || !data.payments) throw new Error('The backend financial reporting release must be deployed with this Console.');
+            this.data = data;
+            this.invoices = invoices.invoices;
+            this.feeInvoices = feeInvoices.invoices;
         } catch (error) {
-            this.error = 'Could not load your wallet. Please try again.';
-            this.notifications.serverError(error);
-        }
-    }
-
-    @dropTask *submit() {
-        this.error = '';
-        const input = this.amount.trim().replace(',', '.');
-        if (!/^\d+(\.\d{1,3})?$/.test(input)) {
-            this.error = 'Enter a valid amount with at most three decimal places.';
-            return;
-        }
-        const [whole, fraction = ''] = input.split('.');
-        const amount = Number(whole) * 1000 + Number(fraction.padEnd(3, '0'));
-        if (!Number.isSafeInteger(amount) || amount < this.data.wallet.minimum_payout || amount > this.data.wallet.available) {
-            this.error = 'The amount must meet the minimum payout and not exceed your available balance.';
-            return;
-        }
-        if (this.method === 'bank_transfer' && !/^\d{20}$/.test(this.rib.trim())) {
-            this.error = 'Enter a 20-digit RIB without spaces.';
-            return;
-        }
-        try {
-            yield this.fetch.post('wallet/payouts', { amount, method: this.method, ...(this.method === 'bank_transfer' ? { rib: this.rib.trim() } : {}) }, API);
-            this.amount = '';
-            this.rib = '';
-            this.notifications.success('Payout requested. It is awaiting administrator approval.');
-            yield this.load.perform();
-        } catch (error) {
-            this.error = 'Could not request the payout. Check the error and refresh before retrying.';
+            this.error = this.intl.t('customer-finances.error');
             this.notifications.serverError(error);
         }
     }

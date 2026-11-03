@@ -30,10 +30,10 @@ export default class PortalPayoutReceiptComponent extends Component {
         return Boolean(this.args.payout.receipt || this.signed);
     }
     get canSign() {
-        return this.args.payout.method === 'office_cash' && this.args.payout.status === 'paid' && this.args.payout.paid_at && !this.received;
+        return this.args.payout.method === 'office_cash' && this.args.payout.status === 'paid' && this.args.payout.paid_at && !this.args.payout.is_reversed && !this.received;
     }
     get bankPaid() {
-        return this.args.payout.method === 'bank_transfer' && this.args.payout.status === 'paid';
+        return this.args.payout.method === 'bank_transfer' && this.args.payout.status === 'paid' && !this.args.payout.is_reversed;
     }
     get amount() {
         return new Intl.NumberFormat('en-GB', { style: 'currency', currency: this.args.currency || 'TND' }).format(this.args.payout.amount / 1000);
@@ -119,12 +119,12 @@ export default class PortalPayoutReceiptComponent extends Component {
                 { signer_name: this.name.trim(), signature: this.strokes, acknowledged: true },
                 API
             );
-            if (!result.receipt?.id || !result.receipt.signed_at) throw new Error('The signed receipt was not returned. Refresh Wallet before trying again.');
+            if (!result.receipt?.id || !result.receipt.signed_at) throw new Error('The signed receipt was not returned. Refresh Invoices before trying again.');
             this.signed = true;
             this.editing = false;
             this.args.onSigned?.();
         } catch (error) {
-            this.error = 'Could not save your signed receipt. Your signature is retained; refresh Wallet before retrying if the response was lost.';
+            this.error = 'Could not save your signed receipt. Your signature is retained; refresh Invoices before retrying if the response was lost.';
             this.notifications.serverError(error);
         } finally {
             this.busy = false;
