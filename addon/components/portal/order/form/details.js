@@ -11,7 +11,7 @@ export default class PortalOrderFormDetailsComponent extends Component {
     podOptions = ['scan', 'signature', 'photo'];
 
     get serviceLevels() {
-        return (this.deliveryOptions.catalogue?.service_levels ?? [{ value: 'standard' }]).filter((item) => item.value === 'standard' && item.available !== false).map((item) => item.value);
+        return (this.deliveryOptions.catalogue?.service_levels ?? [{ value: 'standard' }]).filter((item) => ['standard', 'express'].includes(item.value) && item.available !== false).map((item) => item.value);
     }
 
     @action setPurpose(purpose) {

@@ -10,6 +10,8 @@ customer-finances:
   paid-out: Deja verse
   reserved: Reglements en attente
   remaining-due: Reste a recevoir
+  remitted: Especes remises par le chauffeur
+  all-time-note: Chiffre global. Ce n'est pas une promesse de paiement immediat.
   available: Disponible pour reglement
   orders: Detail financier des commandes
   payments: Reglements et anciennes demandes
@@ -60,6 +62,10 @@ customer-ux:
   account-help: Compte ou autre question
   help-question: De quoi avez-vous besoin ?
   home: Accueil
+  active: En cours
+  completed: Terminees
+  delete: Supprimer
+  members-mobile: Membres de l'entreprise
   help: Aide
   create: Creer une livraison
   view-orders: Voir les commandes

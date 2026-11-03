@@ -1,0 +1,16 @@
+<LinkTo @route="portal.billing" class="portal-dashboard-widget portal-kpi-tile portal-kpi-accent-green" ...attributes>
+    <div class="portal-kpi-content">
+        <div class="min-w-0">
+            <div class="portal-kpi-label">{{t "customer-finances.remaining-due"}}</div>
+            {{#if this.load.isRunning}}
+                <Spinner />
+            {{else if this.error}}
+                <div class="portal-widget-error">{{this.error}}</div>
+            {{else}}
+                <div class="portal-kpi-value" data-test-remaining-due>{{this.formatted}}</div>
+                <div class="text-xs text-gray-500">{{t "customer-finances.all-time-note"}}</div>
+            {{/if}}
+        </div>
+        <div class="portal-kpi-icon"><FaIcon @icon="wallet" /></div>
+    </div>
+</LinkTo>

@@ -3,6 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { dropTask } from 'ember-concurrency';
+import { DEFAULT_FINANCE_BALANCES, FINANCE_BALANCES } from '../../utils/customer-parity';
 
 const API = { namespace: 'customer-portal/int/v1' };
 
@@ -30,7 +31,7 @@ export default class PortalWalletComponent extends Component {
     }
 
     get visibleBalances() {
-        return this.balances.filter((balance) => this.showBreakdown || ['net', 'paid_out', 'remaining_due'].includes(balance.key));
+        return this.balances.filter((balance) => this.showBreakdown || DEFAULT_FINANCE_BALANCES.includes(balance.key));
     }
 
     constructor() {
@@ -44,17 +45,7 @@ export default class PortalWalletComponent extends Component {
 
     get balances() {
         if (!this.data) return [];
-        return [
-            ['collected', 'gross'],
-            ['delivery-fees', 'fee'],
-            ['vat', 'vat'],
-            ['net-earned', 'net'],
-            ['pending', 'driver_pending'],
-            ['paid-out', 'paid_out'],
-            ['reserved', 'reserved'],
-            ['remaining-due', 'remaining_due'],
-            ['available', 'available'],
-        ].map(([label, key]) => ({ key, label: this.intl.t(`customer-finances.${label}`), amount: this.money(this.data.finance[key]) }));
+        return FINANCE_BALANCES.map(([key, label]) => ({ key, label: this.intl.t(`customer-finances.${label}`), amount: this.money(this.data.finance[key] ?? 0) }));
     }
 
     get orders() {

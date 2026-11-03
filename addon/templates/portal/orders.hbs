@@ -1,6 +1,8 @@
 <Portal::ContentWrapper class="portal-page-card portal-order-page-card">
     <Portal::Order::Workspace
-        @orders={{this.model.orders}}
+        @orders={{this.filteredOrders}}
+        @filter={{this.filter}}
+        @onFilter={{this.setFilter}}
         @view={{this.view}}
         @query={{this.query}}
         @isTableView={{this.isTableView}}

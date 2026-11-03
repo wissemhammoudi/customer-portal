@@ -10,6 +10,8 @@ customer-finances:
   paid-out: المبالغ المدفوعة
   reserved: تسويات قيد الانتظار
   remaining-due: المبلغ المتبقي للاستلام
+  remitted: الأموال التي سلمها السائق
+  all-time-note: رقم لكامل السجل. ليس وعدا بالدفع الفوري.
   available: المتاح للتسوية
   orders: التفاصيل المالية للطلبات
   payments: التسويات والطلبات السابقة
@@ -60,6 +62,10 @@ customer-ux:
   account-help: الحساب أو مساعدة أخرى
   help-question: ما نوع المساعدة التي تحتاجها؟
   home: الرئيسية
+  active: الجارية
+  completed: المكتملة
+  delete: حذف
+  members-mobile: أعضاء الشركة
   help: المساعدة
   create: إنشاء توصيل
   view-orders: عرض الطلبات

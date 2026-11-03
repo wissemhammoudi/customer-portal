@@ -7,7 +7,7 @@
             {{else if this.error}}
                 <div class="portal-widget-error">{{this.error}}</div>
             {{else}}
-                <div class="portal-kpi-value">{{format-currency this.total this.currency}}</div>
+                <div class="portal-kpi-value">{{this.total}}</div>
             {{/if}}
         </div>
         <div class="portal-kpi-icon"><FaIcon @icon="file-invoice-dollar" /></div>

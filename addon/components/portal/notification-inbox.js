@@ -46,4 +46,14 @@ export default class PortalNotificationInboxComponent extends Component {
             this.notifications.serverError(error);
         }
     }
+
+    @dropTask *remove(id) {
+        try {
+            yield this.fetch.delete(`notifications/${encodeURIComponent(id)}`, {}, API);
+            const page = this.data?.notifications?.length === 1 && this.page > 1 ? this.page - 1 : this.page;
+            yield this.load.perform(page);
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
 }

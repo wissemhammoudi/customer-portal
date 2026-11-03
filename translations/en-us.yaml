@@ -12,6 +12,8 @@ customer-finances:
   paid-out: Already paid
   reserved: Pending settlements
   remaining-due: Remaining due
+  remitted: Driver cash remitted
+  all-time-note: All-time figure. Not an immediate payment promise.
   available: Available for settlement
   orders: Order financial details
   payments: Settlements and legacy requests
@@ -62,6 +64,10 @@ customer-ux:
   account-help: Account or other help
   help-question: What do you need help with?
   home: Home
+  active: Active
+  completed: Completed
+  delete: Delete
+  members-mobile: Company members
   help: Help
   create: Create delivery
   view-orders: View orders

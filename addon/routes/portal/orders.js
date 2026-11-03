@@ -9,7 +9,7 @@ export default class PortalOrdersRoute extends Route {
     };
 
     async model(params) {
-        const orders = await this.customerPortalOrderActions.loadOrders.perform({ query: params.query });
+        const orders = await this.customerPortalOrderActions.loadOrders.perform({ query: params.query, limit: 100 });
         return { orders };
     }
 }

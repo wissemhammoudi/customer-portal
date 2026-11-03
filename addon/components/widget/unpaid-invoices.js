@@ -17,7 +17,7 @@ export default class WidgetUnpaidInvoicesComponent extends Component {
     @task *load() {
         try {
             const response = yield this.fetch.get('invoices/summary', {}, { namespace: 'customer-portal/int/v1' });
-            this.total = response.balance ?? 0;
+            this.total = response.unpaid ?? 0;
             this.currency = response.currency;
             this.error = null;
         } catch {

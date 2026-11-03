@@ -118,12 +118,22 @@ export default {
                 default: true,
             }),
             new Widget({
+                id: 'customer-portal-remaining-due',
+                name: 'Remaining Due',
+                description: 'All-time COD amount still due to the customer after fees, VAT and transfers.',
+                icon: 'wallet',
+                component: new ExtensionComponent('@fleetbase/customer-portal-engine', 'widget/remaining-due'),
+                grid_options: { x: 0, y: 3, w: 12, h: 3, minW: 3, minH: 3 },
+                category: 'Billing',
+                default: true,
+            }),
+            new Widget({
                 id: 'customer-portal-recent-orders',
                 name: 'Recent Orders',
                 description: 'Most recent orders for the active portal customer account.',
                 icon: 'clock-rotate-left',
                 component: new ExtensionComponent('@fleetbase/customer-portal-engine', 'widget/recent-orders'),
-                grid_options: { x: 0, y: 3, w: 6, h: 14, minW: 5, minH: 10 },
+                grid_options: { x: 0, y: 6, w: 6, h: 14, minW: 5, minH: 10 },
                 category: 'Operations',
                 default: true,
             }),
@@ -133,7 +143,7 @@ export default {
                 description: 'Invoices, tickets, and orders that need customer attention.',
                 icon: 'bell',
                 component: new ExtensionComponent('@fleetbase/customer-portal-engine', 'widget/pending-actions'),
-                grid_options: { x: 6, y: 3, w: 6, h: 14, minW: 5, minH: 10 },
+                grid_options: { x: 6, y: 6, w: 6, h: 14, minW: 5, minH: 10 },
                 category: 'Overview',
                 default: true,
             }),
@@ -142,8 +152,10 @@ export default {
         widgetService.registerDashboard('customer-portal');
         widgetService.registerDashboard('customer-portal-overview');
         widgetService.registerDashboard('customer-portal-overview-v2');
+        widgetService.registerDashboard('customer-portal-overview-v3');
         widgetService.registerWidgets('customer-portal', widgets);
         widgetService.registerWidgets('customer-portal-overview', widgets);
         widgetService.registerWidgets('customer-portal-overview-v2', widgets);
+        widgetService.registerWidgets('customer-portal-overview-v3', widgets);
     },
 };

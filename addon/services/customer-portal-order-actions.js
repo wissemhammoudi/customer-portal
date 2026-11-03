@@ -27,9 +27,9 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
         return yield this.fetch.get('orders', params, normalizeOptions('order'));
     }
 
-    @task *searchOrders(query) {
+    @task *searchOrders(query, limit = 25) {
         yield timeout(300);
-        return yield this.loadOrders.perform({ query });
+        return yield this.loadOrders.perform({ query, limit });
     }
 
     @task *loadOrder(id) {

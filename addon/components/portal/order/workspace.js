@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { ORDER_FILTERS } from '../../../utils/customer-parity';
 
 export default class PortalOrderWorkspaceComponent extends Component {
     @service hostRouter;
@@ -29,6 +30,14 @@ export default class PortalOrderWorkspaceComponent extends Component {
     @action search(event) {
         if (typeof this.args.onSearch === 'function') {
             this.args.onSearch(event.target.value);
+        }
+    }
+
+    filters = ORDER_FILTERS;
+
+    @action setFilter(filter) {
+        if (typeof this.args.onFilter === 'function') {
+            this.args.onFilter(filter);
         }
     }
 
