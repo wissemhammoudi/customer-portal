@@ -1,7 +1,7 @@
 <Portal::ContentWrapper class="portal-page-card">
     <div class="portal-section-header">
         <div>
-            <div class="portal-section-eyebrow">Support Center</div>
+            <div class="portal-section-eyebrow">{{t "customer-ux.help"}}</div>
             <h1>New Support Ticket</h1>
             <p>Send order, billing, document, or account questions to the support team.</p>
         </div>
@@ -26,7 +26,7 @@
                 {{or order.tracking_number.tracking_number order.public_id order.id}}
             </PowerSelect>
         </InputGroup>
-        <InputGroup @name="Category">
+        <InputGroup @name={{t "customer-ux.help-question"}}>
             <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                 <PowerSelect
                     @options={{this.customerIssueCategories}}
@@ -44,32 +44,35 @@
                 </PowerSelect>
             </div>
         </InputGroup>
-        <InputGroup @name="Priority">
-            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                <PowerSelect
-                    @options={{this.issuePriorities}}
-                    @selected={{this.selectedIssuePriority}}
-                    @onChange={{this.setIssuePriority}}
-                    @placeholder="Select priority"
-                    @triggerClass="form-select form-input"
-                    @renderInPlace={{true}}
-                    as |priority|
-                >
-                    <div class="text-sm">
-                        <div class="font-semibold normalize-in-trigger">{{priority.label}}</div>
-                        <div class="hide-from-trigger">{{priority.description}}</div>
-                    </div>
-                </PowerSelect>
-            </div>
-        </InputGroup>
-        <InputGroup @name="Tags" @helpText="Optional labels that help the support team route your request.">
-            <TagInput class="form-input" @tags={{this.tags}} @addTag={{this.addTag}} @removeTagAtIndex={{this.removeTag}} @placeholder="Add tags" as |tag|>
-                {{tag}}
-            </TagInput>
-        </InputGroup>
         <InputGroup @name="Details">
             <Textarea @value={{this.report}} class="form-input w-full" rows="6" placeholder="Add details for the support team." />
         </InputGroup>
+        <Button @text={{t "customer-ux.additional"}} @onClick={{this.toggleAdditional}} />
+        {{#if this.showAdditional}}
+            <InputGroup @name="Priority">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.issuePriorities}}
+                        @selected={{this.selectedIssuePriority}}
+                        @onChange={{this.setIssuePriority}}
+                        @placeholder="Select priority"
+                        @triggerClass="form-select form-input"
+                        @renderInPlace={{true}}
+                        as |priority|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{priority.label}}</div>
+                            <div class="hide-from-trigger">{{priority.description}}</div>
+                        </div>
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+            <InputGroup @name="Tags" @helpText="Optional labels that help the support team route your request.">
+                <TagInput class="form-input" @tags={{this.tags}} @addTag={{this.addTag}} @removeTagAtIndex={{this.removeTag}} @placeholder="Add tags" as |tag|>
+                    {{tag}}
+                </TagInput>
+            </InputGroup>
+        {{/if}}
         <div class="portal-form-actions">
             <LinkTo @route="portal.support" class="portal-quick-link">
                 <span>Cancel</span>

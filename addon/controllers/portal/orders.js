@@ -10,7 +10,7 @@ export default class PortalOrdersController extends Controller {
 
     queryParams = ['view', 'query'];
 
-    @tracked view = 'map';
+    @tracked view = 'table';
     @tracked query = '';
     @tracked selectedOrder;
 

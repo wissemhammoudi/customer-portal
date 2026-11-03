@@ -1,5 +1,5 @@
 {{#if this.workflow}}
-    <ContentPanel @title="Parcel collection" @open={{true}}>
+    <ContentPanel @title={{if this.closed (t "customer-ux.collection-history") (t "customer-ux.preparation")}} @open={{true}}>
         <p class="font-semibold capitalize" data-test-collection-state>{{this.stateLabel}}</p>
         {{#each this.workflow.original_pickups as |contact|}}
             <p>Original pickup: {{contact.name}} - {{contact.street1}} - {{contact.phone}}</p>
@@ -11,7 +11,7 @@
         {{#if this.workflow.planned_delivery_date}}
             <p>Earliest planned delivery: {{this.workflow.planned_delivery_date}} ({{this.workflow.delivery_timezone}}). Not a guaranteed appointment.</p>
         {{/if}}
-        <p>Prepare and package all parcels before confirming. Collection and depot receipt are not delivery completion.</p>
+        {{#if this.editable}}<p>{{t "customer-ux.ready-question"}}</p>{{/if}}
         {{#if this.editable}}
             {{#if this.preview}}
                 {{#each this.preview.pickup_stops as |stop|}}
@@ -31,7 +31,7 @@
             {{else if this.awaitingPreparation}}
                 <Button @text="Ready for pickup" @onClick={{perform this.review}} @isLoading={{this.review.isRunning}} @disabled={{this.review.isRunning}} data-test-collection-ready />
             {{else}}
-                <Button @text="Withdraw readiness" @onClick={{this.withdraw}} @disabled={{this.confirm.isRunning}} data-test-collection-withdraw />
+                <Button @text={{t "customer-ux.not-ready"}} @onClick={{this.withdraw}} @disabled={{this.confirm.isRunning}} data-test-collection-withdraw />
             {{/if}}
         {{else}}
             <p>Contact operations to change collection or delivery details.</p>

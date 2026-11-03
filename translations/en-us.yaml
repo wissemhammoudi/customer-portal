@@ -36,7 +36,7 @@ customer-finances:
   remittance: Driver remittance
   bank-transfer: Bank transfer
   office-cash: Cash at office
-  page: "Page {page} of {pages} ({total} orders)"
+  page: 'Page {page} of {pages} ({total} orders)'
   error: Could not load financial information. Refresh before relying on the balances.
   pending-help: Pending driver cash is not yet available for settlement. Existing pending payments remain reserved.
   fees-help: These invoices document delivery fees already deducted from COD. Do not deduct them again.
@@ -45,3 +45,65 @@ customer-finances:
   reversed: Reversed
   due: Due date
   balance: Invoice balance
+customer-ux:
+  original-amount: Original amount
+  collection-history: Collection history
+  search-documents: Search by document name, type or order
+  all: All
+  shipping: Shipping documents
+  proof: Proof of delivery
+  view: View
+  download: Download
+  no-documents: No documents in this view
+  documents-help: Documents appear when available. Clear the search or choose All to see other files.
+  report-problem: Report a problem
+  delivery-service: Delivery service
+  invoices-payments: Invoices and payments
+  account-help: Account or other help
+  help-question: What do you need help with?
+  home: Home
+  help: Help
+  create: Create delivery
+  view-orders: View orders
+  overview: Overview
+  order-breakdown: Order breakdown
+  transfers: Transfers
+  invoice-documents: Invoice documents
+  see-breakdown: See breakdown
+  hide-breakdown: Hide breakdown
+  money-help: Net is after delivery fees and VAT, not business profit. Remaining due is not an immediate payment promise.
+  transfer-help: Recorded transfers are not independent bank confirmation. Payment history covers all time.
+  recipient: Recipient
+  parcels: Parcels
+  service: Service and collection
+  review: Review and confirm
+  step: 'Step {number} of 4: {title}'
+  step-help: Complete the required information in this step before continuing. Review addresses and phones, parcel packaging, and collection settings.
+  creation-help: Create the order, prepare your parcels, then confirm readiness. Our team organizes pickup.
+  continue: Continue
+  continue-payment: Continue to payment
+  back: Back
+  additional: Additional details
+  pickup: Pickup
+  collection-amount: Recipient collection amount (not the delivery fee)
+  collect-money: Collect money from the recipient?
+  delivery-options: Delivery options
+  order-details: Order details
+  tracking: Tracking
+  details: Details
+  documents: Documents
+  preparation: Parcel preparation
+  ready-question: Are all parcels packaged and ready for collection?
+  not-ready: Parcels are no longer ready
+  awaiting_preparation: Prepare your parcels, then confirm they are ready.
+  ready_for_pickup: Your parcels are ready. Our team is planning pickup.
+  pickup_scheduled: Pickup is planned. Keep your parcels available.
+  pickup_in_progress: Collection is in progress.
+  collected: Collected. Your parcels are heading to our depot.
+  received_at_depot: Your parcels have arrived at our depot.
+  ready_for_delivery_dispatch: Our team is organizing delivery.
+  out_for_delivery: Delivery is in progress.
+  delivered: Delivery completed.
+  cancelled: This order is cancelled. It will not be dispatched.
+  problem: There is an operations problem. Review the details or contact support.
+  tracking-help: Follow tracking for the next delivery update.

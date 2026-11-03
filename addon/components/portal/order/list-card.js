@@ -1,9 +1,17 @@
 import Component from '@glimmer/component';
+import { customerState, guidanceKey } from '../../../utils/customer-experience';
 
-const COMPLETE_STATUSES = ['completed', 'delivered'];
+const COMPLETE_STATUSES = ['completed', 'done', 'delivered'];
 const ACTIVE_STATUSES = ['dispatched', 'started', 'in_progress', 'driver_enroute', 'driver_nearby'];
 
 export default class PortalOrderListCardComponent extends Component {
+    get customerState() {
+        return customerState(this.order);
+    }
+
+    get guidanceKey() {
+        return `customer-ux.${guidanceKey(this.order)}`;
+    }
     get order() {
         return this.args.order ?? {};
     }

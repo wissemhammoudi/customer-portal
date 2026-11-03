@@ -6,9 +6,17 @@
             <p>Track deliveries, invoices, documents, and support activity from one customer workspace.</p>
         </div>
         <div class="portal-dashboard-quick-actions">
-            <LinkTo @route="portal.support" class="portal-quick-link primary">
+            <LinkTo @route="portal.orders.new" class="portal-quick-link primary">
+                <FaIcon @icon="plus" />
+                <span>{{t "customer-ux.create"}}</span>
+            </LinkTo>
+            <LinkTo @route="portal.orders" class="portal-quick-link">
+                <FaIcon @icon="box" />
+                <span>{{t "customer-ux.view-orders"}}</span>
+            </LinkTo>
+            <LinkTo @route="portal.support" class="portal-quick-link">
                 <FaIcon @icon="headset" />
-                <span>New Support Ticket</span>
+                <span>{{t "customer-ux.help"}}</span>
             </LinkTo>
             <LinkTo @route="portal.billing" class="portal-quick-link">
                 <FaIcon @icon="file-invoice-dollar" />

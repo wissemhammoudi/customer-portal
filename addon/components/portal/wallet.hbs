@@ -5,76 +5,101 @@
     </div>
     {{#if this.error}}<p role="alert" class="mt-4">{{this.error}}</p>{{/if}}
     {{#if this.load.isRunning}}<p role="status">{{t "customer-finances.loading"}}</p>{{/if}}
+    <div class="portal-ux-tabs" role="tablist" aria-label={{t "customer-finances.title"}}>
+        <button type="button" role="tab" aria-selected={{eq this.section "overview"}} {{on "click" (fn this.selectSection "overview")}} data-test-finance-tab="overview">{{t
+                "customer-ux.overview"
+            }}</button>
+        <button type="button" role="tab" aria-selected={{eq this.section "orders"}} {{on "click" (fn this.selectSection "orders")}} data-test-finance-tab="orders">{{t
+                "customer-ux.order-breakdown"
+            }}</button>
+        <button type="button" role="tab" aria-selected={{eq this.section "transfers"}} {{on "click" (fn this.selectSection "transfers")}} data-test-finance-tab="transfers">{{t
+                "customer-ux.transfers"
+            }}</button>
+        <button type="button" role="tab" aria-selected={{eq this.section "documents"}} {{on "click" (fn this.selectSection "documents")}} data-test-finance-tab="documents">{{t
+                "customer-ux.invoice-documents"
+            }}</button>
+    </div>
     {{#if this.data}}
-        <h2>{{t "customer-finances.summary"}}</h2>
-        <p>{{t "customer-finances.all-time"}}</p>
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-5">
-            {{#each this.balances as |balance|}}
-                <div class="border rounded p-4" data-test-finance-balance={{balance.key}}><h3>{{balance.label}}</h3><p class="text-xl font-semibold">{{balance.amount}}</p></div>
-            {{/each}}
-        </div>
-        <p class="mt-3">{{t "customer-finances.pending-help"}}</p>
-        <h2 class="mt-5">{{t "customer-finances.orders"}}</h2>
-        <label>{{t "customer-finances.period"}} <Input @value={{this.period}} placeholder="YYYY-MM" data-test-finance-period /></label>
-        <Button @text={{t "customer-finances.filter"}} @onClick={{this.applyPeriod}} @disabled={{this.load.isRunning}} data-test-finance-filter />
-        <div class="overflow-x-auto">
-            <table class="portal-table w-full">
-                <thead><tr><th>{{t "customer-finances.order"}}</th><th>{{t "customer-finances.date"}}</th><th>{{t "customer-finances.collected"}}</th><th>{{t
-                                "customer-finances.delivery-fees"
-                            }}</th><th>{{t "customer-finances.vat"}}</th><th>{{t "customer-finances.net-earned"}}</th><th>{{t "customer-finances.remittance"}}</th></tr></thead>
-                <tbody>{{#each this.orders as |order|}}
-                        <tr data-test-finance-order><td><LinkTo @route="portal.orders.details" @model={{order.order_uuid}}>{{order.reference}}</LinkTo></td><td>{{order.delivered_at}}</td><td
-                            >{{order.grossDisplay}}</td><td>{{order.feeDisplay}}</td><td>{{order.vatDisplay}}</td><td>{{order.netDisplay}}</td><td>{{order.remittance_status}}</td></tr>
-                    {{else}}<tr><td colspan="7">{{t "customer-finances.empty-orders"}}</td></tr>{{/each}}</tbody>
-            </table>
-        </div>
-        <p>{{t "customer-finances.page" page=this.data.orders.page pages=this.data.orders.last_page total=this.data.orders.total}}</p>
-        <Button @text={{t "customer-finances.previous"}} @onClick={{fn this.page "orders" -1}} @disabled={{or this.firstOrderPage this.load.isRunning}} />
-        <Button @text={{t "customer-finances.next"}} @onClick={{fn this.page "orders" 1}} @disabled={{or this.lastOrderPage this.load.isRunning}} data-test-finance-next-orders />
-        <h2 class="mt-5">{{t "customer-finances.payments"}}</h2>
-        <div class="overflow-x-auto">
-            <table class="portal-table w-full">
-                <thead><tr><th>{{t "customer-finances.date"}}</th><th>{{t "customer-finances.amount"}}</th><th>{{t "customer-finances.method"}}</th><th>{{t
-                                "customer-finances.status"
-                            }}</th><th>{{t "customer-finances.reference"}}</th><th>{{t "customer-finances.receipt"}}</th></tr></thead>
-                <tbody>{{#each this.payouts as |payout|}}
-                        <tr><td>{{or payout.paid_at payout.created_at}}</td><td>{{payout.formattedAmount}}{{#if payout.is_reversed}} ({{t "customer-finances.reversed"}}){{/if}}</td><td
-                            >{{payout.methodLabel}}</td><td>{{payout.status}}</td><td>{{payout.reference}} {{payout.note}}</td><td><Portal::PayoutReceipt
-                                    @payout={{payout}}
-                                    @currency={{this.data.finance.currency}}
-                                    @onSigned={{perform this.load}}
-                                /></td></tr>
-                    {{else}}<tr><td colspan="6">{{t "customer-finances.empty-payments"}}</td></tr>{{/each}}</tbody>
-            </table>
-        </div>
-        <Button @text={{t "customer-finances.previous"}} @onClick={{fn this.page "payments" -1}} @disabled={{or this.firstPaymentPage this.load.isRunning}} />
-        <Button @text={{t "customer-finances.next"}} @onClick={{fn this.page "payments" 1}} @disabled={{or this.lastPaymentPage this.load.isRunning}} data-test-finance-next-payments />
-        <h2 class="mt-5">{{t "customer-finances.fee-invoices"}}</h2>
-        <p>{{t "customer-finances.fees-help"}}</p>
-        {{#each this.feeInvoices as |invoice|}}
-            <div class="border rounded p-3"><h3>{{invoice.number}} - {{invoice.period}}</h3><p>{{invoice-money invoice.total invoice.currency}}</p><Portal::InvoicePdfActions
-                    @invoice={{invoice}}
-                    @kind="cod"
-                /></div>
-        {{else}}<p>{{t "customer-finances.empty-invoices"}}</p>{{/each}}
-        <h2 class="mt-5">{{t "customer-finances.regular-invoices"}}</h2>
-        {{#each this.invoices as |invoice|}}
-            <div class="border rounded p-3"><LinkTo @route="portal.billing.details" @model={{or invoice.public_id invoice.id}}>{{or
-                        invoice.number
-                        invoice.public_id
-                        invoice.id
-                    }}</LinkTo><Badge @status={{invoice.status}} />
-                {{#if (or invoice.order_public_id invoice.order_uuid)}}
-                    <p>{{t "customer-finances.order"}}:
-                        <LinkTo @route="portal.orders.details" @model={{or invoice.order_public_id invoice.order_uuid}}>{{or
-                                invoice.order_tracking_number
-                                invoice.order_public_id
-                                invoice.order_uuid
-                            }}</LinkTo>
-                    </p>
-                {{/if}}
-                <p>{{t "customer-finances.due"}}: {{n-a (format-date-fns invoice.due_date "yyyy-MM-dd")}}</p>
-                <p>{{t "customer-finances.balance"}}: {{invoice-money (or invoice.balance 0) invoice.currency}}</p><Portal::InvoicePdfActions @invoice={{invoice}} /></div>
-        {{else}}<p>{{t "customer-finances.empty-invoices"}}</p>{{/each}}
+        {{#if (eq this.section "overview")}}
+            <h2>{{t "customer-finances.summary"}}</h2>
+            <p>{{t "customer-finances.all-time"}}</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-5">
+                {{#each this.visibleBalances as |balance|}}
+                    <div class="border rounded p-4" data-test-finance-balance={{balance.key}}><h3>{{balance.label}}</h3><p class="text-xl font-semibold">{{balance.amount}}</p></div>
+                {{/each}}
+            </div>
+            <p class="mt-3">{{t "customer-ux.money-help"}}</p>
+            <Button @text={{if this.showBreakdown (t "customer-ux.hide-breakdown") (t "customer-ux.see-breakdown")}} @onClick={{this.toggleBreakdown}} data-test-finance-breakdown />
+            {{#if this.showBreakdown}}<p class="mt-3">{{t "customer-finances.pending-help"}}</p>{{/if}}
+        {{/if}}
+        {{#if (eq this.section "orders")}}
+            <h2 class="mt-5">{{t "customer-finances.orders"}}</h2>
+            <p>{{t "customer-finances.all-time"}}</p>
+            <label>{{t "customer-finances.period"}} <Input @value={{this.period}} placeholder="YYYY-MM" data-test-finance-period /></label>
+            <Button @text={{t "customer-finances.filter"}} @onClick={{this.applyPeriod}} @disabled={{this.load.isRunning}} data-test-finance-filter />
+            <div class="overflow-x-auto">
+                <table class="portal-table w-full">
+                    <thead><tr><th>{{t "customer-finances.order"}}</th><th>{{t "customer-finances.date"}}</th><th>{{t "customer-finances.collected"}}</th><th>{{t
+                                    "customer-finances.delivery-fees"
+                                }}</th><th>{{t "customer-finances.vat"}}</th><th>{{t "customer-finances.net-earned"}}</th><th>{{t "customer-finances.remittance"}}</th></tr></thead>
+                    <tbody>{{#each this.orders as |order|}}
+                            <tr data-test-finance-order><td><LinkTo @route="portal.orders.details" @model={{order.order_uuid}}>{{order.reference}}</LinkTo></td><td
+                                >{{order.delivered_at}}</td><td>{{order.grossDisplay}}</td><td>{{order.feeDisplay}}</td><td>{{order.vatDisplay}}</td><td>{{order.netDisplay}}</td><td
+                                >{{order.remittance_status}}</td></tr>
+                        {{else}}<tr><td colspan="7">{{t "customer-finances.empty-orders"}}</td></tr>{{/each}}</tbody>
+                </table>
+            </div>
+            <p>{{t "customer-finances.page" page=this.data.orders.page pages=this.data.orders.last_page total=this.data.orders.total}}</p>
+            <Button @text={{t "customer-finances.previous"}} @onClick={{fn this.page "orders" -1}} @disabled={{or this.firstOrderPage this.load.isRunning}} />
+            <Button @text={{t "customer-finances.next"}} @onClick={{fn this.page "orders" 1}} @disabled={{or this.lastOrderPage this.load.isRunning}} data-test-finance-next-orders />
+        {{/if}}
+        {{#if (eq this.section "transfers")}}
+            <h2 class="mt-5">{{t "customer-finances.payments"}}</h2>
+            <p>{{t "customer-ux.transfer-help"}}</p>
+            <div class="overflow-x-auto">
+                <table class="portal-table w-full">
+                    <thead><tr><th>{{t "customer-finances.date"}}</th><th>{{t "customer-finances.amount"}}</th><th>{{t "customer-finances.method"}}</th><th>{{t
+                                    "customer-finances.status"
+                                }}</th><th>{{t "customer-finances.reference"}}</th><th>{{t "customer-finances.receipt"}}</th></tr></thead>
+                    <tbody>{{#each this.payouts as |payout|}}
+                            <tr><td>{{or payout.paid_at payout.created_at}}</td><td>{{payout.formattedAmount}}{{#if payout.is_reversed}} ({{t "customer-finances.reversed"}}){{/if}}
+                                    {{#if payout.amountChanged}}<p>{{t "customer-ux.original-amount"}}: {{payout.originalAmount}}</p>{{/if}}
+                                </td><td>{{payout.methodLabel}}</td><td>{{if payout.is_reversed (t "customer-finances.reversed") payout.status}}</td><td>{{payout.reference}}
+                                    {{payout.note}}</td><td><Portal::PayoutReceipt @payout={{payout}} @currency={{this.data.finance.currency}} @onSigned={{perform this.load}} /></td></tr>
+                        {{else}}<tr><td colspan="6">{{t "customer-finances.empty-payments"}}</td></tr>{{/each}}</tbody>
+                </table>
+            </div>
+            <Button @text={{t "customer-finances.previous"}} @onClick={{fn this.page "payments" -1}} @disabled={{or this.firstPaymentPage this.load.isRunning}} />
+            <Button @text={{t "customer-finances.next"}} @onClick={{fn this.page "payments" 1}} @disabled={{or this.lastPaymentPage this.load.isRunning}} data-test-finance-next-payments />
+        {{/if}}
+        {{#if (eq this.section "documents")}}
+            <h2 class="mt-5">{{t "customer-finances.fee-invoices"}}</h2>
+            <p>{{t "customer-finances.fees-help"}}</p>
+            {{#each this.feeInvoices as |invoice|}}
+                <div class="border rounded p-3"><h3>{{invoice.number}} - {{invoice.period}}</h3><p>{{invoice-money invoice.total invoice.currency}}</p><Portal::InvoicePdfActions
+                        @invoice={{invoice}}
+                        @kind="cod"
+                    /></div>
+            {{else}}<p>{{t "customer-finances.empty-invoices"}}</p>{{/each}}
+            <h2 class="mt-5">{{t "customer-finances.regular-invoices"}}</h2>
+            {{#each this.invoices as |invoice|}}
+                <div class="border rounded p-3"><LinkTo @route="portal.billing.details" @model={{or invoice.public_id invoice.id}}>{{or
+                            invoice.number
+                            invoice.public_id
+                            invoice.id
+                        }}</LinkTo><Badge @status={{invoice.status}} />
+                    {{#if (or invoice.order_public_id invoice.order_uuid)}}
+                        <p>{{t "customer-finances.order"}}:
+                            <LinkTo @route="portal.orders.details" @model={{or invoice.order_public_id invoice.order_uuid}}>{{or
+                                    invoice.order_tracking_number
+                                    invoice.order_public_id
+                                    invoice.order_uuid
+                                }}</LinkTo>
+                        </p>
+                    {{/if}}
+                    <p>{{t "customer-finances.due"}}: {{n-a (format-date-fns invoice.due_date "yyyy-MM-dd")}}</p>
+                    <p>{{t "customer-finances.balance"}}: {{invoice-money (or invoice.balance 0) invoice.currency}}</p><Portal::InvoicePdfActions @invoice={{invoice}} /></div>
+            {{else}}<p>{{t "customer-finances.empty-invoices"}}</p>{{/each}}
+        {{/if}}
     {{/if}}
 </Portal::ContentWrapper>

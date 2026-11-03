@@ -1,47 +1,53 @@
-<ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
-    <div class="grid grid-cols-1 gap-3">
-        <InputGroup @name="Order purpose" @required={{true}}>
-            <Button
-                @text="Delivery"
-                @type={{if (eq @draft.meta.delivery.purpose "transportation") "primary" "default"}}
-                @onClick={{fn this.setPurpose "transportation"}}
-                @disabled={{@draft.meta.delivery.original_order_uuid}}
-            />
-            <Button
-                @text="Return"
-                @type={{if (eq @draft.meta.delivery.purpose "return") "primary" "default"}}
-                @onClick={{fn this.setPurpose "return"}}
-                @disabled={{@draft.meta.delivery.original_order_uuid}}
-            />
-            {{#if (eq @draft.meta.delivery.purpose "return")}}
-                <p>Return quotes include a 40% discount, calculated by the server.</p>
-            {{/if}}
-        </InputGroup>
-        <InputGroup @name="Service">
-            <Select @options={{this.serviceLevels}} @value={{@draft.meta.delivery.service_level}} @onSelect={{this.setServiceLevel}} />
-            {{#if (eq @draft.meta.delivery.service_level "express")}}
-                <InfoBlock @text="Express is not currently available. Choose Standard to request a quote." />
-            {{/if}}
-        </InputGroup>
-        <p>Pickup and delivery dates are organized by Colab Express after your parcels are confirmed ready.</p>
-        <InputGroup>
-            <Toggle @label="Allow opening at delivery" @isToggled={{@draft.meta.delivery.opening_allowed}} @onToggle={{this.toggleOpening}} />
-        </InputGroup>
-        <InputGroup>
-            <Toggle @label="Require proof of delivery" @isToggled={{@draft.podRequired}} @onToggle={{this.togglePodRequired}} />
-        </InputGroup>
-        {{#if @draft.podRequired}}
-            <InputGroup @name="Proof Method">
-                <Select class="w-full" @options={{this.podOptions}} @value={{@draft.podMethod}} @onSelect={{this.setPodMethod}} @placeholder="Select proof method" />
-            </InputGroup>
-        {{/if}}
-        <InputGroup>
-            <Toggle @label="Collect cash on delivery" @isToggled={{this.collectCash}} @onToggle={{this.toggleCollectCash}} />
-        </InputGroup>
-        {{#if this.collectCash}}
-            <InputGroup @name="Cash amount to collect (TND)" @helpText="Cash only. Up to 3 decimal places; this is not the delivery fee." @required={{true}}>
-                <input aria-label="Cash amount to collect (TND)" value={{@draft.payload.cod_amount}} inputmode="decimal" class="form-input w-full" {{on "input" this.setCodAmount}} />
-            </InputGroup>
-        {{/if}}
-    </div>
-</ContentPanel>
+{{#unless (eq @section "parcels")}}
+    <ContentPanel @title={{t "customer-ux.delivery-options"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-3">
+            {{#unless (eq @section "service")}}
+                <InputGroup @name="Order purpose" @required={{true}}>
+                    <Button
+                        @text="Delivery"
+                        @type={{if (eq @draft.meta.delivery.purpose "transportation") "primary" "default"}}
+                        @onClick={{fn this.setPurpose "transportation"}}
+                        @disabled={{@draft.meta.delivery.original_order_uuid}}
+                    />
+                    <Button
+                        @text="Return"
+                        @type={{if (eq @draft.meta.delivery.purpose "return") "primary" "default"}}
+                        @onClick={{fn this.setPurpose "return"}}
+                        @disabled={{@draft.meta.delivery.original_order_uuid}}
+                    />
+                    {{#if (eq @draft.meta.delivery.purpose "return")}}
+                        <p>Return quotes include a 40% discount, calculated by the server.</p>
+                    {{/if}}
+                </InputGroup>
+            {{/unless}}
+            {{#unless (eq @section "purpose")}}
+                <InputGroup @name="Service">
+                    <Select @options={{this.serviceLevels}} @value={{@draft.meta.delivery.service_level}} @onSelect={{this.setServiceLevel}} />
+                    {{#if (eq @draft.meta.delivery.service_level "express")}}
+                        <InfoBlock @text="Express is not currently available. Choose Standard to request a quote." />
+                    {{/if}}
+                </InputGroup>
+                <p>Pickup and delivery dates are organized by Colab Express after your parcels are confirmed ready.</p>
+                <InputGroup>
+                    <Toggle @label="Allow opening at delivery" @isToggled={{@draft.meta.delivery.opening_allowed}} @onToggle={{this.toggleOpening}} />
+                </InputGroup>
+                <InputGroup>
+                    <Toggle @label="Require proof of delivery" @isToggled={{@draft.podRequired}} @onToggle={{this.togglePodRequired}} />
+                </InputGroup>
+                {{#if @draft.podRequired}}
+                    <InputGroup @name="Proof Method">
+                        <Select class="w-full" @options={{this.podOptions}} @value={{@draft.podMethod}} @onSelect={{this.setPodMethod}} @placeholder="Select proof method" />
+                    </InputGroup>
+                {{/if}}
+                <InputGroup>
+                    <Toggle @label={{t "customer-ux.collect-money"}} @isToggled={{this.collectCash}} @onToggle={{this.toggleCollectCash}} />
+                </InputGroup>
+                {{#if this.collectCash}}
+                    <InputGroup @name="Cash amount to collect (TND)" @helpText="Cash only. Up to 3 decimal places; this is not the delivery fee." @required={{true}}>
+                        <input aria-label="Cash amount to collect (TND)" value={{@draft.payload.cod_amount}} inputmode="decimal" class="form-input w-full" {{on "input" this.setCodAmount}} />
+                    </InputGroup>
+                {{/if}}
+            {{/unless}}
+        </div>
+    </ContentPanel>
+{{/unless}}

@@ -3,9 +3,10 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { arrayFor, valueFor } from '../../../utils/model-access';
+import { customerState, guidanceKey } from '../../../utils/customer-experience';
 
 const CANCELLED_STATUSES = ['canceled', 'cancelled', 'order_canceled', 'order_cancelled'];
-const CLOSED_STATUSES = ['completed', 'done', ...CANCELLED_STATUSES];
+const CLOSED_STATUSES = ['completed', 'done', 'delivered', ...CANCELLED_STATUSES];
 
 export default class PortalOrderDetailsComponent extends Component {
     @service customerPortalOrderActions;
@@ -15,6 +16,19 @@ export default class PortalOrderDetailsComponent extends Component {
     @service notifications;
 
     @tracked order = this.args.model?.order;
+    @tracked section = 'tracking';
+
+    get customerState() {
+        return customerState(this.order);
+    }
+
+    get guidanceKey() {
+        return `customer-ux.${guidanceKey(this.order)}`;
+    }
+
+    @action selectSection(section) {
+        this.section = section;
+    }
 
     get canModify() {
         return this.order && !CLOSED_STATUSES.includes(valueFor(this.order, 'status'));

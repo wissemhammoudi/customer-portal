@@ -16,12 +16,11 @@ export default class PortalOrderCollectionReadinessComponent extends Component {
     }
 
     get editable() {
-        return (
-            !['completed', 'done', 'delivered', 'canceled', 'cancelled'].includes(valueFor(this.args.order, 'status')) &&
-            this.workflow?.version === 1 &&
-            !this.workflow?.collection_round_uuid &&
-            ['awaiting_preparation', 'ready_for_pickup'].includes(this.workflow?.state)
-        );
+        return !this.closed && this.workflow?.version === 1 && !this.workflow?.collection_round_uuid && ['awaiting_preparation', 'ready_for_pickup'].includes(this.workflow?.state);
+    }
+
+    get closed() {
+        return ['completed', 'done', 'delivered', 'canceled', 'cancelled'].includes(valueFor(this.args.order, 'status'));
     }
 
     get awaitingPreparation() {

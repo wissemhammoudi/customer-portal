@@ -1,3 +1,49 @@
+.portal-ux-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 16px;
+}
+
+.portal-ux-tabs button {
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid currentColor;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.portal-ux-tabs button[aria-selected='true'] {
+    color: #c92a2a;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 5px;
+}
+
+.portal-ux-tabs button:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+}
+
+body[data-theme='dark'] .portal-ux-tabs button[aria-selected='true'] {
+    color: #ff8585;
+}
+
+.portal-ux-step {
+    padding: 16px;
+    overflow-wrap: anywhere;
+}
+
+.portal-ux-step h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.portal-ux-step p {
+    margin-top: 8px;
+    line-height: 1.5;
+}
+
 body.fleetbase-portal {
     overflow-y: scroll;
 }

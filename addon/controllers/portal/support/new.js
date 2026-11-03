@@ -9,6 +9,7 @@ export default class PortalSupportNewController extends Controller {
     @service fetch;
     @service notifications;
     @service hostRouter;
+    @service intl;
 
     queryParams = ['order_id'];
 
@@ -20,9 +21,28 @@ export default class PortalSupportNewController extends Controller {
     @tracked category;
     @tracked priority = 'medium';
     @tracked tags = [];
+    @tracked showAdditional = false;
+
+    @action toggleAdditional() {
+        this.showAdditional = !this.showAdditional;
+    }
 
     issuePriorities = issuePriorities;
-    customerIssueCategories = issueCategories.filter((category) => category.group === 'customer');
+    get customerIssueCategories() {
+        const labels = {
+            customer_complaint: 'report-problem',
+            service_quality: 'delivery-service',
+            billing_discrepancies: 'invoices-payments',
+            customer_communication: 'account-help',
+            order_errors: 'order-details',
+        };
+        return issueCategories
+            .filter((category) => category.group === 'customer')
+            .map((category) => ({
+                ...category,
+                label: labels[category.value] ? this.intl.t(`customer-ux.${labels[category.value]}`) : category.label,
+            }));
+    }
 
     get selectedIssueCategory() {
         return this.customerIssueCategories.find((category) => category.value === this.category);
@@ -80,6 +100,7 @@ export default class PortalSupportNewController extends Controller {
         this.category = null;
         this.priority = 'medium';
         this.tags = [];
+        this.showAdditional = false;
     }
 
     @action setIssueCategory(category) {

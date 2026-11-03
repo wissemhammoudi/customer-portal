@@ -34,7 +34,7 @@ customer-finances:
   remittance: تسليم السائق
   bank-transfer: تحويل بنكي
   office-cash: نقدا في المكتب
-  page: "صفحة {page} من {pages} ({total} طلب)"
+  page: 'صفحة {page} من {pages} ({total} طلب)'
   error: تعذر تحميل المعلومات المالية. حدّث الصفحة قبل الاعتماد على الأرصدة.
   pending-help: الأموال التي ما زالت لدى السائق ليست متاحة للتسوية. تبقى الدفعات المعلقة محجوزة.
   fees-help: هذه الفواتير توثق مصاريف سبق خصمها من المبالغ المقبوضة. لا تخصمها مرة ثانية.
@@ -43,3 +43,65 @@ customer-finances:
   reversed: ملغى
   due: تاريخ الاستحقاق
   balance: رصيد الفاتورة
+customer-ux:
+  original-amount: المبلغ الأصلي
+  collection-history: سجل الرفع
+  search-documents: البحث حسب الاسم أو النوع أو الطلب
+  all: الكل
+  shipping: وثائق الشحن
+  proof: إثبات التوصيل
+  view: عرض
+  download: تنزيل
+  no-documents: لا توجد وثائق في هذا العرض
+  documents-help: تظهر الوثائق عندما تصبح متاحة. امسح البحث أو اختر الكل لرؤية بقية الملفات.
+  report-problem: الإبلاغ عن مشكلة
+  delivery-service: خدمة التوصيل
+  invoices-payments: الفواتير والدفعات
+  account-help: الحساب أو مساعدة أخرى
+  help-question: ما نوع المساعدة التي تحتاجها؟
+  home: الرئيسية
+  help: المساعدة
+  create: إنشاء توصيل
+  view-orders: عرض الطلبات
+  overview: نظرة عامة
+  order-breakdown: التفاصيل حسب الطلب
+  transfers: الدفعات
+  invoice-documents: وثائق الفواتير
+  see-breakdown: عرض التفاصيل
+  hide-breakdown: إخفاء التفاصيل
+  money-help: الصافي بعد مصاريف التوصيل والأداء وليس ربح تجارتك. المتبقي ليس وعدا بدفع فوري.
+  transfer-help: الدفعات المسجلة ليست تأكيدا مستقلا من البنك. يشمل السجل كل الفترات.
+  recipient: المستلم
+  parcels: الطرود
+  service: الخدمة والتحصيل
+  review: مراجعة وتأكيد
+  step: 'مرحلة {number} من 4: {title}'
+  step-help: أكمل المعلومات المطلوبة. راجع العناوين والهواتف والتغليف والمبلغ المطلوب تحصيله.
+  creation-help: أنشئ الطلب ثم حضّر الطرود وأكد جاهزيتها. فريقنا ينظم الرفع.
+  continue: متابعة
+  continue-payment: متابعة إلى الدفع
+  back: رجوع
+  additional: تفاصيل إضافية
+  pickup: الرفع
+  collection-amount: المبلغ المطلوب تحصيله وليس معلوم التوصيل
+  collect-money: تحصيل مبلغ من المستلم؟
+  delivery-options: خيارات التوصيل
+  order-details: تفاصيل الطلب
+  tracking: التتبع
+  details: التفاصيل
+  documents: الوثائق
+  preparation: تحضير الطرود
+  ready-question: هل كل الطرود مغلفة وجاهزة للرفع؟
+  not-ready: الطرود لم تعد جاهزة
+  awaiting_preparation: حضّر الطرود ثم أكد جاهزيتها.
+  ready_for_pickup: الطرود جاهزة. فريقنا ينظم الرفع.
+  pickup_scheduled: تمت برمجة الرفع. أبق الطرود متاحة.
+  pickup_in_progress: الرفع جار.
+  collected: الطرود في الطريق إلى المستودع.
+  received_at_depot: وصلت الطرود إلى المستودع.
+  ready_for_delivery_dispatch: فريقنا ينظم التوصيل.
+  out_for_delivery: التوصيل جار.
+  delivered: اكتمل التوصيل.
+  cancelled: الطلب ملغى ولن يتم إرساله.
+  problem: توجد مشكلة. راجع التفاصيل أو اتصل بالمساعدة.
+  tracking-help: تابع الطلب للاطلاع على التحديث القادم.

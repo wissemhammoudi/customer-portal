@@ -18,6 +18,20 @@ export default class PortalWalletComponent extends Component {
     @tracked selectedPeriod = '';
     @tracked orderPage = 1;
     @tracked paymentPage = 1;
+    @tracked section = 'overview';
+    @tracked showBreakdown = false;
+
+    @action selectSection(section) {
+        this.section = section;
+    }
+
+    @action toggleBreakdown() {
+        this.showBreakdown = !this.showBreakdown;
+    }
+
+    get visibleBalances() {
+        return this.balances.filter((balance) => this.showBreakdown || ['net', 'paid_out', 'remaining_due'].includes(balance.key));
+    }
 
     constructor() {
         super(...arguments);
@@ -56,7 +70,9 @@ export default class PortalWalletComponent extends Component {
     get payouts() {
         return (this.data?.payments.data ?? []).map((payment) => ({
             ...payment,
-            formattedAmount: this.money(payment.amount),
+            formattedAmount: this.money(payment.paid_at || payment.status === 'paid' || payment.is_reversed ? payment.paid_amount : payment.amount),
+            originalAmount: this.money(payment.amount),
+            amountChanged: (payment.paid_at || payment.status === 'paid' || payment.is_reversed) && payment.paid_amount !== payment.amount,
             methodLabel: this.intl.t(`customer-finances.${payment.method === 'bank_transfer' ? 'bank-transfer' : 'office-cash'}`),
         }));
     }

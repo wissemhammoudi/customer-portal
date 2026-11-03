@@ -8,8 +8,9 @@
                     <div class="portal-order-card-subtitle">{{smart-humanize @order.meta.delivery.purpose}} / {{smart-humanize @order.meta.delivery.service_level}}</div>
                 {{/if}}
             </div>
-            <Badge @status={{@order.status}} />
+            <Badge @status={{this.customerState}} />
         </div>
+        <p>{{t this.guidanceKey}}</p>
 
         <div class="portal-order-card-progress {{this.progressClass}}">
             <span></span>
@@ -44,7 +45,7 @@
         </div>
 
         <div class="portal-order-card-meta">
-            <span><FaIcon @icon="calendar" /> {{n-a (format-date-fns (or @order.scheduled_at @order.created_at) "MMM d, HH:mm")}}</span>
+            <span><FaIcon @icon="calendar" /> {{n-a (format-date-fns @order.created_at "MMM d, HH:mm")}}</span>
             {{#if this.hasTrackingMeta}}
                 <span>
                     <FaIcon @icon="route" />

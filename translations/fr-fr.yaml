@@ -34,7 +34,7 @@ customer-finances:
   remittance: Remise chauffeur
   bank-transfer: Virement bancaire
   office-cash: Especes au bureau
-  page: "Page {page} sur {pages} ({total} commandes)"
+  page: 'Page {page} sur {pages} ({total} commandes)'
   error: Impossible de charger les informations financieres. Actualisez avant de vous fier aux soldes.
   pending-help: Les especes encore chez le chauffeur ne sont pas disponibles pour reglement. Les paiements en attente restent reserves.
   fees-help: Ces factures justifient les frais deja deduits du COD. Ne les deduisez pas une seconde fois.
@@ -43,3 +43,65 @@ customer-finances:
   reversed: Annule
   due: Echeance
   balance: Solde de la facture
+customer-ux:
+  original-amount: Montant initial
+  collection-history: Historique du ramassage
+  search-documents: Rechercher par nom, type ou commande
+  all: Tous
+  shipping: Documents d'expedition
+  proof: Preuve de livraison
+  view: Voir
+  download: Telecharger
+  no-documents: Aucun document dans cette vue
+  documents-help: Les documents apparaissent lorsqu'ils sont disponibles. Effacez la recherche ou choisissez Tous pour voir les autres fichiers.
+  report-problem: Signaler un probleme
+  delivery-service: Service de livraison
+  invoices-payments: Factures et paiements
+  account-help: Compte ou autre question
+  help-question: De quoi avez-vous besoin ?
+  home: Accueil
+  help: Aide
+  create: Creer une livraison
+  view-orders: Voir les commandes
+  overview: Vue d'ensemble
+  order-breakdown: Detail par commande
+  transfers: Versements
+  invoice-documents: Documents de facturation
+  see-breakdown: Voir le detail
+  hide-breakdown: Masquer le detail
+  money-help: Le net est calcule apres frais et TVA, pas votre benefice. Le reste du n'est pas une promesse de paiement immediat.
+  transfer-help: Les versements enregistres ne constituent pas une confirmation bancaire independante. L'historique couvre toutes les periodes.
+  recipient: Destinataire
+  parcels: Colis
+  service: Service et encaissement
+  review: Verifier et confirmer
+  step: 'Etape {number} sur 4 : {title}'
+  step-help: Completez les informations de cette etape. Verifiez les adresses et telephones, l'emballage et les montants a encaisser.
+  creation-help: Creez la commande, preparez les colis, puis confirmez qu'ils sont prets. Notre equipe organise le ramassage.
+  continue: Continuer
+  continue-payment: Continuer vers le paiement
+  back: Retour
+  additional: Details supplementaires
+  pickup: Ramassage
+  collection-amount: Montant a encaisser (pas les frais de livraison)
+  collect-money: Encaisser de l'argent aupres du destinataire ?
+  delivery-options: Options de livraison
+  order-details: Details de la commande
+  tracking: Suivi
+  details: Details
+  documents: Documents
+  preparation: Preparation des colis
+  ready-question: Tous les colis sont-ils emballes et prets pour le ramassage ?
+  not-ready: Les colis ne sont plus prets
+  awaiting_preparation: Preparez les colis, puis confirmez qu'ils sont prets.
+  ready_for_pickup: Vos colis sont prets. Notre equipe organise le ramassage.
+  pickup_scheduled: Le ramassage est planifie. Gardez les colis disponibles.
+  pickup_in_progress: Le ramassage est en cours.
+  collected: Les colis sont en route vers notre depot.
+  received_at_depot: Vos colis sont arrives au depot.
+  ready_for_delivery_dispatch: Notre equipe organise la livraison.
+  out_for_delivery: La livraison est en cours.
+  delivered: Livraison terminee.
+  cancelled: Cette commande est annulee. Elle ne sera pas expediee.
+  problem: Un probleme est signale. Consultez les details ou contactez l'assistance.
+  tracking-help: Consultez le suivi pour la prochaine mise a jour.

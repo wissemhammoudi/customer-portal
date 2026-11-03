@@ -6,6 +6,7 @@ import { later } from '@ember/runloop';
 import { timeout } from 'ember-concurrency';
 import { isBlank } from '@ember/utils';
 import config from 'ember-get-config';
+import { validPickup, hasPhone } from '../../../utils/customer-order-policy';
 
 export default class PortalOrderFormComponent extends Component {
     @service customerPortalOrderActions;
@@ -18,9 +19,55 @@ export default class PortalOrderFormComponent extends Component {
     @service modalsManager;
     @service notifications;
     @service urlSearchParams;
+    @service intl;
 
     @tracked lastQuotedRevision = null;
     @tracked checkoutStarting = false;
+    @tracked step = 0;
+    @tracked showAdditional = false;
+
+    get stepTitle() {
+        return this.intl.t(`customer-ux.${['recipient', 'parcels', 'service', 'review'][this.step]}`);
+    }
+
+    get stepNumber() {
+        return this.step + 1;
+    }
+
+    get canContinue() {
+        const payload = this.draft?.payload ?? {};
+        if (this.draft?.blockedReason || this.draft?.pickupChanged || this.checkoutStarting || this.customerPortalOrderActions.createOrder.isRunning) return false;
+        if (this.step === 0) {
+            if (this.draft?.meta?.delivery?.original_order_uuid && !this.draft.returnAddressesConfirmed) return false;
+            if (this.draft?.isMultipleDropoffOrder) return payload.waypoints?.length >= 2 && payload.waypoints.every((stop) => validPickup(stop.place));
+            return validPickup(payload.pickup) && hasPhone(payload.dropoff) && Boolean(payload.dropoff?.street1 || payload.dropoff?.address);
+        }
+        if (this.step === 1)
+            return (
+                payload.entities?.length > 0 &&
+                payload.entities.every((entity) => {
+                    if (typeof this.deliveryOptions.isValidEntity === 'function') return this.deliveryOptions.isValidEntity(entity, true);
+                    return this.deliveryOptions.isValidParcel(entity);
+                })
+            );
+        return this.canQuote;
+    }
+
+    @action nextStep() {
+        if (!this.canContinue || this.step >= 3) {
+            this.notifications.warning(this.intl.t('customer-ux.step-help'));
+            return;
+        }
+        this.step++;
+    }
+
+    @action previousStep() {
+        if (this.step > 0 && !this.checkoutStarting && !this.customerPortalOrderActions.createOrder.isRunning) this.step--;
+    }
+
+    @action toggleAdditional() {
+        this.showAdditional = !this.showAdditional;
+    }
 
     get draft() {
         return this.customerPortalOrderCreation.draft ?? this.args.model?.draft;

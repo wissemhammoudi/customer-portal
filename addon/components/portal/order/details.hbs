@@ -9,17 +9,35 @@
     class="portal-order-panel-overlay"
 >
     <div class="details-wrapper scrollable">
+        <section class="portal-ux-step">
+            <Badge @status={{this.customerState}} />
+            <p>{{t this.guidanceKey}}</p>
+        </section>
         <Portal::Order::CollectionReadiness @order={{this.order}} @onChanged={{this.updateCollectionOrder}} />
-        <Portal::Order::Details::Activity @resource={{this.order}} />
-        <Portal::Order::Details::Details @resource={{this.order}} />
-        <Portal::Order::Details::ServiceRate @resource={{this.order}} />
-        <Portal::Order::Details::Tracking @resource={{this.order}} />
-        <Portal::Order::Details::Route @resource={{this.order}} />
-        <Portal::Order::Details::Payload @resource={{this.order}} />
-        <Portal::Order::Details::Proof @resource={{this.order}} />
-        <Portal::Order::Details::Documents @resource={{this.order}} />
-        <Portal::Order::Details::CustomFields @resource={{this.order}} />
-        <Portal::Order::Details::Notes @resource={{this.order}} />
-        <Spacer @height="200px" />
+        <div class="portal-ux-tabs" role="tablist" aria-label={{t "customer-ux.order-details"}}>
+            <button type="button" role="tab" aria-selected={{eq this.section "tracking"}} {{on "click" (fn this.selectSection "tracking")}}>{{t "customer-ux.tracking"}}</button>
+            <button type="button" role="tab" aria-selected={{eq this.section "details"}} {{on "click" (fn this.selectSection "details")}}>{{t "customer-ux.details"}}</button>
+            <button type="button" role="tab" aria-selected={{eq this.section "parcels"}} {{on "click" (fn this.selectSection "parcels")}}>{{t "customer-ux.parcels"}}</button>
+            <button type="button" role="tab" aria-selected={{eq this.section "documents"}} {{on "click" (fn this.selectSection "documents")}}>{{t "customer-ux.documents"}}</button>
+        </div>
+        {{#if (eq this.section "tracking")}}
+            <Portal::Order::Details::Activity @resource={{this.order}} />
+            <Portal::Order::Details::Tracking @resource={{this.order}} />
+            <Portal::Order::Details::Route @resource={{this.order}} />
+        {{/if}}
+        {{#if (eq this.section "parcels")}}
+            <Portal::Order::Details::Payload @resource={{this.order}} />
+        {{/if}}
+        {{#if (eq this.section "documents")}}
+            <Portal::Order::Details::Proof @resource={{this.order}} />
+            <Portal::Order::Details::Documents @resource={{this.order}} />
+        {{/if}}
+        {{#if (eq this.section "details")}}
+            <Portal::Order::Details::Details @resource={{this.order}} />
+            <Portal::Order::Details::ServiceRate @resource={{this.order}} />
+            <Portal::Order::Details::CustomFields @resource={{this.order}} />
+            <Portal::Order::Details::Notes @resource={{this.order}} />
+        {{/if}}
+        <Spacer @height="40px" />
     </div>
 </Layout::Resource::Panel>

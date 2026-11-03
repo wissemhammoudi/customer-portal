@@ -5,6 +5,13 @@
             <h1>Documents</h1>
             <p>Download labels, PODs, photos, invoices, receipts, and order files.</p>
         </div>
+        <Input @value={{this.query}} class="form-input w-full" aria-label={{t "customer-ux.search-documents"}} placeholder={{t "customer-ux.search-documents"}} />
+        <div class="portal-ux-tabs" role="tablist" aria-label={{t "customer-ux.documents"}}>
+            <button type="button" role="tab" aria-selected={{eq this.section "all"}} {{on "click" (fn this.selectSection "all")}}>{{t "customer-ux.all"}}</button>
+            <button type="button" role="tab" aria-selected={{eq this.section "shipping"}} {{on "click" (fn this.selectSection "shipping")}}>{{t "customer-ux.shipping"}}</button>
+            <button type="button" role="tab" aria-selected={{eq this.section "proof"}} {{on "click" (fn this.selectSection "proof")}}>{{t "customer-ux.proof"}}</button>
+            <button type="button" role="tab" aria-selected={{eq this.section "finance"}} {{on "click" (fn this.selectSection "finance")}}>{{t "customer-ux.invoice-documents"}}</button>
+        </div>
     </div>
     <div class="next-table-wrapper no-scroll h-auto table-fluid portal-table-panel mt-5">
         <table class="table table-fixed portal-table">
@@ -18,7 +25,7 @@
                 </tr>
             </thead>
             <tbody>
-                {{#each this.model.documents as |document|}}
+                {{#each this.documents as |document|}}
                     <tr>
                         <td class="font-semibold">{{or document.original_filename document.name document.public_id}}</td>
                         <td>{{n-a (humanize document.type)}}</td>
@@ -29,9 +36,10 @@
                                 {{#if document.url}}
                                     <div class="flex items-center justify-end space-x-2">
                                         <span class="btn-wrapper inline-flex rounded-md shadow-sm">
-                                            <a href={{document.url}} target="_blank" rel="noopener noreferrer" class="btn btn-default btn-xs"><FaIcon @icon="eye" /></a>
+                                            <a href={{document.url}} target="_blank" rel="noopener noreferrer" class="btn btn-default btn-xs"><FaIcon @icon="eye" />
+                                                {{t "customer-ux.view"}}</a>
                                         </span>
-                                        <Button @size="xs" @icon="download" @onClick={{fn this.downloadDocument document}} />
+                                        <Button @text={{t "customer-ux.download"}} @size="xs" @icon="download" @onClick={{fn this.downloadDocument document}} />
                                     </div>
                                 {{else}}
                                     <span class="text-xs text-gray-500">Unavailable</span>
@@ -44,8 +52,8 @@
                         <td colspan="5">
                             <div class="portal-empty-state portal-table-empty-state">
                                 <div class="portal-empty-state-icon"><FaIcon @icon="folder-open" /></div>
-                                <div class="portal-empty-state-title">No documents yet</div>
-                                <p>Labels, PODs, photos, invoices, receipts, and order files will appear here when they become available.</p>
+                                <div class="portal-empty-state-title">{{t "customer-ux.no-documents"}}</div>
+                                <p>{{t "customer-ux.documents-help"}}</p>
                             </div>
                         </td>
                     </tr>
