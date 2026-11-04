@@ -74,6 +74,8 @@ customer-business:
     city: Ville
     postal_code: Code postal
 customer-finances:
+  payment-instructions: Especes ou virement bancaire
+  payment-confirmation: Le paiement est enregistre apres confirmation par la finance. Indiquez le numero de facture comme reference.
   title: Factures
   summary: Situation financiere
   explanation: Encaissements COD, frais de livraison et reglements comptabilises. Ce n'est pas le benefice de votre entreprise.

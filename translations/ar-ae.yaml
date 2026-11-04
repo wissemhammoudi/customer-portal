@@ -74,6 +74,8 @@ customer-business:
     city: المدينة
     postal_code: الترقيم البريدي
 customer-finances:
+  payment-instructions: نقدا أو تحويل بنكي
+  payment-confirmation: يتسجل الدفع بعد تأكيد المالية للاستلام. استعمل رقم الفاتورة كمرجع.
   title: الفواتير
   summary: الوضعية المالية
   explanation: المبالغ المقبوضة ومصاريف التوصيل والتسويات المسجلة. هذه ليست أرباح تجارتك.

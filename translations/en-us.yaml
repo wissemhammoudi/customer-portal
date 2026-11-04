@@ -76,6 +76,8 @@ customer-business:
     city: City
     postal_code: Postal code
 customer-finances:
+  payment-instructions: Cash or bank transfer
+  payment-confirmation: Payment is recorded only after finance confirms receipt. Use the invoice number as your reference.
   title: Invoices
   summary: Financial overview
   explanation: Recorded COD collections, delivery fees and settlements. This is not your business profit.

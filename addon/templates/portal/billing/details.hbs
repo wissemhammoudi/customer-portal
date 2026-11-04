@@ -41,6 +41,21 @@
     </div>
 
     <div class="portal-invoice-preview">
+        {{#if this.invoice.payment_instructions}}
+            <section class="portal-invoice-notes">
+                <h2>{{t "customer-finances.payment-instructions"}}</h2>
+                <p>{{t "customer-finances.payment-confirmation"}}</p>
+                <p>{{this.invoice.payment_instructions.bank_name}} {{this.invoice.payment_instructions.bank_account_name}}</p>
+                {{#if this.invoice.payment_instructions.rib}}<p>RIB: {{this.invoice.payment_instructions.rib}}</p>{{/if}}
+                {{#if this.invoice.payment_instructions.iban}}<p>IBAN: {{this.invoice.payment_instructions.iban}}</p>{{/if}}
+            </section>
+        {{/if}}
+        {{#each this.invoice.payments as |payment|}}
+            <div class="portal-invoice-notes">
+                <p>{{invoice-money payment.amount payment.currency}} — {{payment.method}} — {{payment.reference}}</p>
+                {{#if payment.reversed_at}}<p>{{t "customer-finances.reversed"}}</p>{{/if}}
+            </div>
+        {{/each}}
         <div class="portal-invoice-preview-header">
             <div>
                 <div class="portal-section-eyebrow">Preview</div>
