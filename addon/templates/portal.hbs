@@ -7,13 +7,16 @@
             <div class="min-w-0">
                 <div class="portal-account-eyebrow">{{this.accountTypeLabel}}</div>
                 <div class="portal-account-name">{{this.accountName}}</div>
+                <Portal::AccountSwitcher />
             </div>
         </div>
         <div class="portal-topbar-actions">
-            <LinkTo @route="portal.support" class="portal-header-link">
-                <FaIcon @icon="headset" />
-                <span>{{t "customer-ux.help"}}</span>
-            </LinkTo>
+            {{#if this.customerSession.capabilities.support}}
+                <LinkTo @route="portal.support" class="portal-header-link">
+                    <FaIcon @icon="headset" />
+                    <span>{{t "customer-ux.help"}}</span>
+                </LinkTo>
+            {{/if}}
             <LinkTo @route="portal.documents" class="portal-header-link hidden md:inline-flex">
                 <FaIcon @icon="folder-open" />
                 <span>Documents</span>
@@ -53,8 +56,12 @@
                 <div class="portal-nav-label">Workspace</div>
                 <Layout::Sidebar::Item @route="customer-portal.portal.home" @icon="home">{{t "customer-ux.home"}}</Layout::Sidebar::Item>
                 <Layout::Sidebar::Item @route="customer-portal.portal.orders" @icon="boxes-packing">Orders</Layout::Sidebar::Item>
-                <Layout::Sidebar::Item @route="customer-portal.portal.billing" @icon="file-invoice-dollar">{{t "customer-finances.title"}}</Layout::Sidebar::Item>
-                <Layout::Sidebar::Item @route="customer-portal.portal.support" @icon="headset">{{t "customer-ux.help"}}</Layout::Sidebar::Item>
+                {{#if this.customerSession.capabilities.finance}}
+                    <Layout::Sidebar::Item @route="customer-portal.portal.billing" @icon="file-invoice-dollar">{{t "customer-finances.title"}}</Layout::Sidebar::Item>
+                {{/if}}
+                {{#if this.customerSession.capabilities.support}}
+                    <Layout::Sidebar::Item @route="customer-portal.portal.support" @icon="headset">{{t "customer-ux.help"}}</Layout::Sidebar::Item>
+                {{/if}}
                 <Layout::Sidebar::Item @route="customer-portal.portal.documents" @icon="folder-open">Documents</Layout::Sidebar::Item>
             </div>
             <div class="portal-nav-group">

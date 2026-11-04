@@ -1,5 +1,80 @@
 starter:
   extension-name: Starter
+customer-team:
+  selection-required: "Your previous workspace is no longer available. Choose an authorized account to continue."
+  resend: "Resend invitation email"
+  created: "Your employee login is ready. Sign in with your email and new password, then choose the company workspace."
+  sign-in: "Sign in"
+  existing-login: "Your login already exists and its password has not been changed. Sign in and accept this invitation under Company members / Business information."
+  password: "New password"
+  confirm-password: "Confirm password"
+  password-help: "Choose your own password: at least 12 characters with uppercase and lowercase letters, numbers and a symbol. Acceptance activates the limited company access shown above."
+  workspace: "Active workspace (switching closes unsaved work)"
+  choose: "Choose an account"
+  title: "Company access and invitations"
+  explanation: "Only a verified company's owner manages employees. An invitation email lets a new employee set their own password; existing customers sign in and accept here within 7 days. No company access is granted before acceptance."
+  accept: "Accept invitation"
+  name: "Employee name"
+  email: "Employee email"
+  role: "Access role"
+  invite: "Create invitation"
+  cancel: "Cancel invitation"
+  toggle: "Suspend / restore access"
+  documents: "Private verification documents"
+  document-help: "Upload the fiscal card and applicable RNE extract (PDF, JPG or PNG, maximum 5 MB each). These are visible only to the owner and authorized verification staff."
+  tax-card: "Fiscal card"
+  rne-extract: "RNE extract"
+  roles:
+    owner: "Owner - full company administration"
+    operations: "Operations manager - all orders, no finance"
+    operator: "Order operator - own orders only"
+    accountant: "Accountant - finance and order viewing"
+    viewer: "Viewer - read-only order tracking"
+customer-business:
+  title: Business information
+  explanation: Keep your individual account, or submit a Tunisian business profile for verification. A business may be an individual professional or a company.
+  history: Submission does not activate a business account, invite employees, or move existing orders, invoices, COD balances or support history.
+  owner-only: Only the established account owner can submit legal information. Contact support if ownership has not been established.
+  refresh: Refresh business information
+  submitted: Business information submitted for review. Your account has not been converted.
+  invalid-response: The server did not confirm the business profile. Refresh before trying again.
+  legal-form: Legal form
+  governorate: Governorate
+  rne-applicable: RNE registration applies to my business
+  declaration: I am authorized to represent this business and confirm that this information is accurate.
+  tax-help: "Full matricule fiscal, for example 1234567A/A/M/000. Formatting is checked, not official registration. Explain any RNE exemption for staff review."
+  review-help: Review the information above. Confirmation submits an application only; verification and employee permissions are separate steps.
+  review: Review business application
+  submit: Submit for verification
+  edit: Edit information
+  close: Close
+  status:
+    not_submitted: Individual account - no business application
+    legacy_incomplete: Existing business account - legal information needs completion
+    pending_review: Business information awaiting review - not verified
+    changes_requested: Business information needs corrections
+    verified: Business information verified
+    rejected: Business application declined
+  forms:
+    individual_business: Individual business / Personne physique
+    suarl: SUARL
+    sarl: SARL
+    sa: SA
+    other: Other legal form
+  fields:
+    legal_name: Legal name / Raison sociale
+    trade_name: Shop or trading name (optional)
+    legal_form_other: Specify legal form
+    tax_id: Matricule fiscal
+    rne_id: RNE identifier / reference
+    rne_exemption_reason: Reason RNE registration does not apply
+    activity: Business activity
+    representative_name: Authorized representative
+    email: Business email
+    phone: Business phone (+216)
+    street1: Registered billing address
+    city: City
+    postal_code: Postal code
 customer-finances:
   title: Invoices
   summary: Financial overview

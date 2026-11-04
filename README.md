@@ -175,7 +175,8 @@ Both app and web use the authenticated `customer-portal/int/v1` namespace:
   account/company-owned Place; concurrent writes lock the account. PUT updates
   that record or reuses a matching owned record. GET returns null for a missing,
   deleted or foreign pointer. `DELETE places/{id}` clears the pointer when
-  deleting the current pickup. Conversion to a company preserves it.
+  deleting the current pickup. Submitting business information does not move or
+  replace the current pickup.
 
 Only Profile/Settings edits the pickup; new-order UI shows it read-only. Scoped
 quote/create APIs require this current pickup (street, coordinates and phone),
@@ -193,7 +194,7 @@ through generic address-book PATCH is rejected with instructions to use Settings
 - **Billing** - Customer invoice lists, invoice details, and invoice summaries backed by Ledger when it is installed and available.
 - **Support** - Customer support tickets backed by FleetOps Issues, including issue creation, summaries, comments, replies, editing, and deletion.
 - **Documents and address book** - Customer-visible order documents plus account-scoped place search, lookup, creation, update, and deletion.
-- **Account settings** - Account profile data, self-service password change, vendor conversion flows, personnel management, and notification preferences.
+- **Account settings** - Account profile data, self-service password change, Tunisian business applications, existing-company personnel management, and notification preferences.
 - **Admin configuration** - Console settings panel for portal configuration, access URL validation, enabled order configs, enabled service rates, and payment settings.
 - **Extension points** - Sidebar and login registries, dashboard/widget registration, virtual routes, and menu integration for extending the portal from other Fleetbase packages.
 
@@ -270,6 +271,69 @@ Checkout draft transfer uses protected `GET/POST checkout-drafts` and `GET/PUT c
 Opaque checkout parameters survive login and two-factor authentication in per-tab session storage. The new-order controller declares those query parameters and resets them on exit so a later new delivery cannot accidentally reopen the previous checkout.
 
 New checkout sessions include quote/company metadata and require confirmed payment. In-flight pre-upgrade sessions without metadata fail explicitly and need reconciliation before rollout. Local fake-gateway tests do not replace Stripe staging validation, production-database concurrency testing or Ledger acceptance.
+
+## Tunisian business accounts
+
+Account settings and the Members area expose the shared business-information form.
+Individuals can remain individuals without submitting a dossier. An individual
+professional (personne physique) is supported alongside SUARL, SARL, SA and other
+explained legal forms. The form requires legal/fiscal identification, an RNE
+reference or justified exemption, activity, an authorized representative and a
+Tunisian billing address and contact information. Fiscal syntax validation is
+not official business verification.
+
+- `GET account/business-profile` returns `business_profile` with the account UUID,
+  individual/business classification, status, revision, owner submission permission,
+  legal profile (owners only) and submission time.
+- `POST account/business-profile` accepts `revision`, an accepted `declaration`
+  and the `profile` object. Successful submissions are `pending_review`.
+  Identical retries return the existing revision; changed stale writes return 409.
+- Existing companies without a dossier are `legacy_incomplete`, not verified.
+  Established ownership requires owner metadata and active admin membership.
+  An unestablished owner contacts support rather than self-claiming ownership.
+- Submission never creates a Vendor, grants employee access, or rewrites orders,
+  invoices, COD balances, addresses or support history. Existing company operations
+  remain available. The old instant-conversion endpoints explicitly return 409
+  and direct older clients to update and use the new application.
+
+Apply the host application's
+[`2026_11_04_000001_create_portal_business_profiles.php`](../../api/database/migrations/2026_11_04_000001_create_portal_business_profiles.php)
+migration before serving the new API. Rebuild backend and Console together, and
+update the customer mobile app. The parent release verifies and packages the
+matching service/controller and migration. Also apply
+[`2026_11_04_000002_complete_customer_business_accounts.php`](../../api/database/migrations/2026_11_04_000002_complete_customer_business_accounts.php).
+
+Owners submit private PDF/JPEG/PNG fiscal and applicable RNE evidence (5 MB/file,
+10 files/dossier). Organization management > Customer business verification lets
+authorized staff inspect documents and approve, request corrections or reject
+with revision checks and an audited note. Approval of an individual creates a
+separate company, never moves personal history, and enables invitations. Existing
+company invoices are archived before legal identity changes; subsequently issued
+invoices use the verified billing snapshot. Files stay on the private persistent
+`business-private` disk, never a public upload URL. Native owners upload/list;
+web owners and staff can also download.
+
+`GET account/choices` and `POST account/select` implement explicit workspace
+selection; `X-Customer-Account` binds subsequent calls to that workspace. Revoked
+selections return `selection_required` from the account endpoint so clients can
+choose a remaining account, not silently blend personal and company records.
+Every protected request checks current membership and role.
+
+Verified owners manage `account/team` and email invitations. New employees set
+their own password through a private, expiring email link; existing customers
+accept using their authenticated invited email under `account/invitations`.
+Resending rotates the secret; no credentials or user directory are returned to
+owners. A functioning outgoing mail transport is required; failures are explicit.
+Direct employee creation/customer discovery is retired.
+
+Operations manages company orders/support; operator sees and creates only its
+own orders/support; accountant reads company orders/finances without payout or
+receipt-signing authority; viewer reads company orders. Only the established
+owner manages employees/legal data. Legacy Admin maps to operations unless it
+is the established owner; Member maps to operator; unknown roles fail closed.
+Owner suspension/removal and assigning owner through employee APIs are forbidden.
+Signed invoice/receipt downloads also revalidate current access. No dossier is
+approved automatically or claimed to have undergone official registry lookup.
 
 ## Installation
 

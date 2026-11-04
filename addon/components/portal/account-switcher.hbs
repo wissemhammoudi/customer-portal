@@ -1,0 +1,12 @@
+<div class="min-w-0">
+    <label class="text-xs block">
+        {{t "customer-team.workspace"}}
+        <select class="form-select max-w-full" disabled={{this.select.isRunning}} {{on "change" (perform this.select)}}>
+            <option value="">{{t "customer-team.choose"}}</option>
+            {{#each this.customerSession.accounts as |account|}}
+                <option value={{account.uuid}} selected={{eq account.uuid this.customerSession.accountId}}>{{account.name}} ({{account.customer_type}})</option>
+            {{/each}}
+        </select>
+    </label>
+    {{#if this.error}}<p role="alert">{{this.error}}</p>{{/if}}
+</div>

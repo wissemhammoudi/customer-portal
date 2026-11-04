@@ -25,7 +25,7 @@ class DashboardController extends Controller
         $context = $this->accountResolver->resolve();
         $actions = [];
 
-        $billing        = $this->billingService->summary();
+        $billing        = ($context['capabilities']['finance'] ?? true) ? $this->billingService->summary() : [];
         $unpaidInvoices = (int) data_get($billing, 'unpaid', 0);
         if ($unpaidInvoices > 0) {
             $actions[] = [
@@ -37,7 +37,7 @@ class DashboardController extends Controller
             ];
         }
 
-        $openIssues = $this->supportService->queryForAccount($context)->whereNotIn('status', ['resolved', 'closed'])->count();
+        $openIssues = ($context['capabilities']['support'] ?? true) ? $this->supportService->queryForAccount($context)->whereNotIn('status', ['resolved', 'closed'])->count() : 0;
         if ($openIssues > 0) {
             $actions[] = [
                 'title'       => $openIssues . ' open support ' . ($openIssues === 1 ? 'ticket' : 'tickets'),

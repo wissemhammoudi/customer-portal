@@ -8,7 +8,7 @@ use Fleetbase\CustomerPortal\Services\PortalOrderService;
 use Fleetbase\CustomerPortal\Services\PortalCheckoutDraftService;
 use Fleetbase\CustomerPortal\Services\PortalReturnService;
 use Fleetbase\CustomerPortal\Services\PortalRoutePreviewService;
-use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
+use Fleetbase\CustomerPortal\Http\Resources\Order as OrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\OrderConfig as OrderConfigResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Proof as ProofResource;
 use Fleetbase\FleetOps\Http\Resources\v1\TrackingStatus as TrackingStatusResource;

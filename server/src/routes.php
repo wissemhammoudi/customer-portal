@@ -44,7 +44,7 @@ Route::prefix(config('customer-portal.api.routing.prefix', 'customer-portal'))->
                             }
                         );
                         $router->group(
-                            ['middleware' => ['fleetbase.protected']],
+                            ['middleware' => ['fleetbase.protected', \Fleetbase\CustomerPortal\Http\Middleware\PortalAccessGuard::class]],
                             function ($router) {
                                 $router->group(
                                     ['prefix' => 'settings', 'middleware' => []],
@@ -59,6 +59,8 @@ Route::prefix(config('customer-portal.api.routing.prefix', 'customer-portal'))->
                                 $router->put('account/pickup-address', 'AccountController@updatePickupAddress');
                                 $router->post('account/change-password', 'AccountController@changePassword');
                                 $router->post('account/convert-to-vendor', 'CustomerConversionController@convertCurrentContactToVendor');
+                                $router->get('account/business-profile', 'BusinessProfileController@index');
+                                $router->post('account/business-profile', 'BusinessProfileController@store')->middleware('throttle:30,1');
                                 $router->get('account/personnels', 'AccountPersonnelController@index');
                                 $router->get('account/personnel-candidates', 'AccountPersonnelController@candidates');
                                 $router->post('account/personnels', 'AccountPersonnelController@store');

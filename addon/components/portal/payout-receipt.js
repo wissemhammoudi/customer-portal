@@ -9,6 +9,7 @@ const API = { namespace: 'customer-portal/int/v1' };
 export default class PortalPayoutReceiptComponent extends Component {
     @service fetch;
     @service notifications;
+    @service customerSession;
     @tracked editing = false;
     @tracked name = '';
     @tracked busy = false;
@@ -30,7 +31,14 @@ export default class PortalPayoutReceiptComponent extends Component {
         return Boolean(this.args.payout.receipt || this.signed);
     }
     get canSign() {
-        return this.args.payout.method === 'office_cash' && this.args.payout.status === 'paid' && this.args.payout.paid_at && !this.args.payout.is_reversed && !this.received;
+        return (
+            this.customerSession.capabilities.finance_write &&
+            this.args.payout.method === 'office_cash' &&
+            this.args.payout.status === 'paid' &&
+            this.args.payout.paid_at &&
+            !this.args.payout.is_reversed &&
+            !this.received
+        );
     }
     get bankPaid() {
         return this.args.payout.method === 'bank_transfer' && this.args.payout.status === 'paid' && !this.args.payout.is_reversed;

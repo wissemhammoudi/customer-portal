@@ -179,19 +179,7 @@ export default class PortalAccountController extends Controller {
         }
 
         try {
-            yield this.fetch.post(
-                'account/convert-to-vendor',
-                {
-                    name: this.companyName || this.customerSession.get('name'),
-                    email: this.companyEmail || this.customerSession.get('email'),
-                    phone: this.companyPhone || this.customerSession.get('phone'),
-                },
-                { namespace: 'customer-portal/int/v1' }
-            );
-
-            yield this.customerSession.promiseCurrentCustomer();
-            this.notifications.success('Company account created.');
-            this.loadPersonnel.perform();
+            yield this.modalsManager.show('modals/portal-convert-to-company');
         } catch (error) {
             this.notifications.serverError(error);
         }

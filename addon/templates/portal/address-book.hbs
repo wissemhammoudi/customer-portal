@@ -7,7 +7,13 @@
         </div>
         <div class="flex flex-wrap gap-2">
             <LinkTo @route="portal.saved-parcels" class="btn">Manage saved parcels</LinkTo>
-            <Button @type="primary" @icon="plus" @text="New Place" @onClick={{this.createPlace}} @wrapperClass="portal-order-panel-action-button" />
+            {{#if this.customerSession.capabilities.resources_write}}<Button
+                    @type="primary"
+                    @icon="plus"
+                    @text="New Place"
+                    @onClick={{this.createPlace}}
+                    @wrapperClass="portal-order-panel-action-button"
+                />{{/if}}
         </div>
     </div>
 
@@ -34,8 +40,10 @@
                         <td>{{#each place.phones as |phone|}}<div>{{phone}}</div>{{else}}{{n-a place.phone}}{{/each}}</td>
                         <td>
                             <div class="flex items-center justify-end space-x-2">
-                                <Button @icon="pencil" @size="xs" @onClick={{fn this.editPlace place}} @helpText="Edit place" />
-                                <Button @type="danger" @icon="trash" @size="xs" @onClick={{fn this.deletePlace place}} @helpText="Remove place" />
+                                {{#if this.customerSession.capabilities.resources_write}}
+                                    <Button @icon="pencil" @size="xs" @onClick={{fn this.editPlace place}} @helpText="Edit place" />
+                                    <Button @type="danger" @icon="trash" @size="xs" @onClick={{fn this.deletePlace place}} @helpText="Remove place" />
+                                {{/if}}
                             </div>
                         </td>
                     </tr>
@@ -48,7 +56,13 @@
                                 </div>
                                 <div class="portal-empty-state-title">No saved places yet</div>
                                 <p>Add frequently used pickup and delivery locations so order creation is faster.</p>
-                                <Button @type="primary" @icon="plus" @text="New Place" @onClick={{this.createPlace}} @wrapperClass="portal-order-panel-action-button" />
+                                {{#if this.customerSession.capabilities.resources_write}}<Button
+                                        @type="primary"
+                                        @icon="plus"
+                                        @text="New Place"
+                                        @onClick={{this.createPlace}}
+                                        @wrapperClass="portal-order-panel-action-button"
+                                    />{{/if}}
                             </div>
                         </td>
                     </tr>

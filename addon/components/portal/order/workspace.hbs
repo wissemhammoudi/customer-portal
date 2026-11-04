@@ -8,14 +8,23 @@
         <div class="portal-order-workspace-actions">
             <div class="portal-order-view-toggle" role="tablist" aria-label="Order status" data-test-order-filter>
                 {{#each this.filters as |item|}}
-                    <Button @text={{t (concat "customer-ux." item)}} @type={{if (eq @filter item) "primary"}} @size="sm" @onClick={{fn this.setFilter item}} @wrapperClass="portal-order-view-toggle-item" />
+                    <Button
+                        @text={{t (concat "customer-ux." item)}}
+                        @type={{if (eq @filter item) "primary"}}
+                        @size="sm"
+                        @onClick={{fn this.setFilter item}}
+                        @wrapperClass="portal-order-view-toggle-item"
+                    />
                 {{/each}}
-            </div>            <div class="portal-order-view-toggle" role="group" aria-label="Order view">
+            </div>
+            <div class="portal-order-view-toggle" role="group" aria-label="Order view">
                 <Button @icon="map" @text="Map" @type={{unless this.showTable "primary"}} @size="sm" @onClick={{fn @onSwitchView "map"}} @wrapperClass="portal-order-view-toggle-item" />
                 <Button @icon="table" @text="Table" @type={{if this.showTable "primary"}} @size="sm" @onClick={{fn @onSwitchView "table"}} @wrapperClass="portal-order-view-toggle-item" />
             </div>
             <Button @icon="rotate" @onClick={{this.reloadOrders}} @isLoading={{@isReloading}} />
-            <Button @icon="plus" @type="primary" @text={{t "customer-ux.create"}} @onClick={{this.createOrder}} />
+            {{#if this.customerSession.capabilities.orders_write}}
+                <Button @icon="plus" @type="primary" @text={{t "customer-ux.create"}} @onClick={{this.createOrder}} />
+            {{/if}}
         </div>
     </div>
 

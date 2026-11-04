@@ -24,11 +24,14 @@ class DocumentController extends Controller
 
         $documents = File::where('company_uuid', session('company'))
             ->where(function ($query) use ($context, $orderIds) {
-                $query->where('subject_uuid', $context['account']->uuid);
+                $query->whereRaw('1 = 0');
+                if ($context['capabilities']['business'] ?? false) $query->orWhere('subject_uuid', $context['account']->uuid);
                 if ($orderIds) {
                     $query->orWhereIn('subject_uuid', $orderIds);
                 }
             })
+            ->when(isset($context['capabilities']) && !$context['capabilities']['finance'],
+                fn ($query) => $query->where(fn ($query) => $query->whereNull('type')->orWhereNotIn('type', ['invoice', 'receipt', 'payout_receipt', 'payment_receipt'])))
             ->latest()
             ->limit(100)
             ->get()

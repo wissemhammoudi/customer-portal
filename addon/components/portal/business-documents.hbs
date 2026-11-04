@@ -1,0 +1,20 @@
+<section class="space-y-3">
+    <h4 class="font-semibold">{{t "customer-team.documents"}}</h4>
+    <p>{{t "customer-team.document-help"}}</p>
+    {{#if @editable}}
+        <label class="block">
+            {{t "customer-team.tax-card"}}
+            <input type="file" accept=".pdf,.png,.jpg,.jpeg" disabled={{this.upload.isRunning}} {{on "change" (perform this.upload "tax_card")}} />
+        </label>
+        {{#if @profile.profile.rne_applicable}}
+            <label class="block">
+                {{t "customer-team.rne-extract"}}
+                <input type="file" accept=".pdf,.png,.jpg,.jpeg" disabled={{this.upload.isRunning}} {{on "change" (perform this.upload "rne_extract")}} />
+            </label>
+        {{/if}}
+    {{/if}}
+    {{#if this.error}}<p role="alert">{{this.error}}</p>{{/if}}
+    {{#each this.documents as |document|}}
+        <Button @text={{document.kind}} @onClick={{fn this.download document}} @disabled={{this.downloadFile.isRunning}} />
+    {{/each}}
+</section>

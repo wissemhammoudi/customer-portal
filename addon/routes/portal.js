@@ -39,6 +39,10 @@ export default class PortalRoute extends Route {
             await this.session.promiseCurrentUser(transition);
             try {
                 const customer = await this.customerSession.promiseCurrentCustomer();
+                if (this.customerSession.selectionRequired) {
+                    this.hostRouter.transitionTo('customer-portal.choose-account');
+                    return;
+                }
                 return customer;
             } catch (err) {
                 this.session.invalidateWithLoader();

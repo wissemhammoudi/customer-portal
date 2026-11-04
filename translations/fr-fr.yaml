@@ -1,3 +1,78 @@
+customer-team:
+  selection-required: "Votre espace précédent n'est plus disponible. Choisissez un compte autorisé pour continuer."
+  resend: "Renvoyer l'e-mail d'invitation"
+  created: "Votre accès salarié est prêt. Connectez-vous avec votre e-mail et nouveau mot de passe, puis choisissez l'espace entreprise."
+  sign-in: "Se connecter"
+  existing-login: "Votre accès existe déjà ; son mot de passe n'a pas été modifié. Connectez-vous et acceptez sous Membres / Informations professionnelles."
+  password: "Nouveau mot de passe"
+  confirm-password: "Confirmer le mot de passe"
+  password-help: "Choisissez votre mot de passe : au moins 12 caractères avec majuscules, minuscules, chiffres et symbole. L'acceptation active l'accès limité indiqué."
+  workspace: "Espace actif (le changement ferme les modifications non enregistrées)"
+  choose: "Choisir un compte"
+  title: "Accès entreprise et invitations"
+  explanation: "Seul le propriétaire d'une entreprise vérifiée gère les salariés. L'e-mail d'invitation permet au nouveau salarié de choisir son mot de passe ; les clients existants se connectent et acceptent ici sous 7 jours. Aucun accès entreprise avant acceptation."
+  accept: "Accepter l'invitation"
+  name: "Nom du salarié"
+  email: "E-mail du salarié"
+  role: "Rôle d'accès"
+  invite: "Créer une invitation"
+  cancel: "Annuler l'invitation"
+  toggle: "Suspendre / rétablir l'accès"
+  documents: "Justificatifs privés"
+  document-help: "Déposez la carte fiscale et l'extrait RNE applicable (PDF, JPG ou PNG, 5 Mo maximum chacun). Visibles uniquement par le propriétaire et les agents de vérification autorisés."
+  tax-card: "Carte fiscale"
+  rne-extract: "Extrait RNE"
+  roles:
+    owner: "Propriétaire - administration complète"
+    operations: "Responsable opérations - toutes les commandes, sans finances"
+    operator: "Opérateur - ses propres commandes uniquement"
+    accountant: "Comptable - finances et lecture des commandes"
+    viewer: "Lecteur - suivi des commandes uniquement"
+customer-business:
+  title: Informations professionnelles
+  explanation: Gardez votre compte particulier ou soumettez un dossier professionnel tunisien. Un professionnel peut exercer en personne physique ou en société.
+  history: Le dépôt ne convertit pas le compte, ne donne aucun accès salarié et ne déplace ni commandes, ni factures, ni soldes COD, ni historique de support.
+  owner-only: Seul le propriétaire identifié du compte peut soumettre les informations légales. Contactez le support si le propriétaire n'est pas identifié.
+  refresh: Actualiser les informations
+  submitted: Dossier soumis pour examen. Votre compte n'a pas été converti.
+  invalid-response: Le serveur n'a pas confirmé le dossier. Actualisez avant de réessayer.
+  legal-form: Forme juridique
+  governorate: Gouvernorat
+  rne-applicable: Mon activité est soumise à une immatriculation au RNE
+  declaration: Je suis autorisé à représenter cette entreprise et je certifie l'exactitude de ces informations.
+  tax-help: "Matricule fiscal complet, par exemple 1234567A/A/M/000. Le format est contrôlé, pas l'immatriculation officielle. Toute dispense du RNE doit être justifiée pour examen."
+  review-help: Vérifiez les informations ci-dessus. La confirmation dépose uniquement un dossier ; la vérification et les accès salariés sont des étapes distinctes.
+  review: Vérifier le dossier
+  submit: Soumettre pour vérification
+  edit: Modifier les informations
+  close: Fermer
+  status:
+    not_submitted: Compte particulier - aucun dossier professionnel
+    legacy_incomplete: Compte professionnel existant - informations légales à compléter
+    pending_review: Dossier en attente d'examen - non vérifié
+    changes_requested: Informations à corriger
+    verified: Informations professionnelles vérifiées
+    rejected: Dossier professionnel refusé
+  forms:
+    individual_business: Entrepreneur individuel / Personne physique
+    suarl: SUARL
+    sarl: SARL
+    sa: SA
+    other: Autre forme juridique
+  fields:
+    legal_name: Nom légal / Raison sociale
+    trade_name: Nom commercial (facultatif)
+    legal_form_other: Précisez la forme juridique
+    tax_id: Matricule fiscal
+    rne_id: Identifiant / référence RNE
+    rne_exemption_reason: Motif de dispense du RNE
+    activity: Activité professionnelle
+    representative_name: Représentant autorisé
+    email: E-mail professionnel
+    phone: Téléphone professionnel (+216)
+    street1: Adresse légale de facturation
+    city: Ville
+    postal_code: Code postal
 customer-finances:
   title: Factures
   summary: Situation financiere

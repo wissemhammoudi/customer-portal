@@ -6,6 +6,7 @@ import { arrayFor, valueFor } from '../../utils/model-access';
 
 export default class PortalDocumentsController extends Controller {
     @service notifications;
+    @service customerSession;
     @tracked query = '';
     @tracked section = 'all';
 

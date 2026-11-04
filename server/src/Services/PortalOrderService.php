@@ -123,6 +123,8 @@ class PortalOrderService
         // tenant isolation without hiding orders because of a type representation.
         return Order::where('company_uuid', session('company'))
             ->whereIn('customer_uuid', $accountCustomerUuids)
+            ->when(isset($context['capabilities']) && !$context['capabilities']['orders_all'],
+                fn ($query) => $query->where('meta->customer_portal->created_by_uuid', session('user')))
             ->whereNull('deleted_at')
             ->withoutGlobalScopes();
     }
@@ -283,6 +285,8 @@ class PortalOrderService
         $order = Order::withoutGlobalScopes()
             ->where('company_uuid', session('company'))
             ->whereIn('customer_uuid', $this->accountCustomerUuids($context))
+            ->when(isset($context['capabilities']) && !$context['capabilities']['orders_all'],
+                fn ($query) => $query->where('meta->customer_portal->created_by_uuid', session('user')))
             ->where(function ($query) use ($quoteUuid) {
                 $query->where('meta->customer_portal->service_quote_uuid', $quoteUuid)
                     ->orWhereHas('purchaseRate', fn ($rate) => $rate->withoutGlobalScopes()->where('service_quote_uuid', $quoteUuid));
@@ -458,28 +462,7 @@ class PortalOrderService
 
     protected function accountCustomerUuids(array $context): array
     {
-        $uuids = collect();
-
-        if ($context['contact'] ?? null) {
-            $uuids->push($context['contact']->uuid);
-        }
-
-        if ($context['account'] ?? null) {
-            $uuids->push($context['account']->uuid);
-        }
-
-        foreach ($context['accounts'] ?? [] as $account) {
-            $uuid = data_get($account, 'uuid');
-            if ($uuid) {
-                $uuids->push($uuid);
-            }
-        }
-
-        return $uuids
-            ->filter(fn ($uuid) => filled($uuid))
-            ->unique()
-            ->values()
-            ->all();
+        return [$context['account']->uuid];
     }
 
     public function migrateCustomerOwnership($contact, $vendor, string $vendorType): void

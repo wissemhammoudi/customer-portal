@@ -16,7 +16,9 @@ class PortalSupportService
     {
         return Issue::where('company_uuid', session('company'))
             ->where('meta->customer_portal->customer_uuid', $context['account']->uuid)
-            ->where('meta->customer_portal->customer_type', $context['account_type']);
+            ->where('meta->customer_portal->customer_type', $context['account_type'])
+            ->when(isset($context['capabilities']) && !$context['capabilities']['orders_all'],
+                fn ($query) => $query->where('meta->customer_portal->contact_uuid', $context['contact']?->uuid));
     }
 
     public function portalMeta(array $context, array $extra = []): array
@@ -98,7 +100,10 @@ class PortalSupportService
 
         if ($customerType === 'vendor') {
             return VendorPersonnel::where('vendor_uuid', $customerUuid)
-                ->whereNotIn('status', ['inactive', 'disabled', 'suspended'])
+                ->where('status', 'active')
+                ->where(fn ($query) => $query->whereIn('role', ['admin', 'operations'])
+                    ->orWhere(fn ($query) => $query->whereIn('role', ['member', 'operator'])
+                        ->where('contact_uuid', data_get($issue, 'meta.customer_portal.contact_uuid'))))
                 ->with('contact')
                 ->get()
                 ->pluck('contact.user_uuid')

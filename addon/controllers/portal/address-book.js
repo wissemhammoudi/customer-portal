@@ -6,12 +6,14 @@ export default class PortalAddressBookController extends Controller {
     @service fetch;
     @service modalsManager;
     @service notifications;
+    @service customerSession;
 
     get places() {
         return this.model?.places ?? [];
     }
 
     get actionButtons() {
+        if (!this.customerSession.capabilities.resources_write) return [];
         return [
             {
                 text: 'New Place',

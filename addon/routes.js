@@ -1,6 +1,8 @@
 import buildRoutes from 'ember-engines/routes';
 
 export default buildRoutes(function () {
+    this.route('invitation', { path: '/invitation/:id' });
+    this.route('choose-account', { path: '/choose-account' });
     this.route('portal-auth', { path: '/auth' }, function () {
         this.route('login');
         this.route('two-fa');

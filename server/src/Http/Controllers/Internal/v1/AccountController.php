@@ -19,13 +19,34 @@ class AccountController extends Controller
 
     public function account()
     {
-        $context = $this->accountResolver->resolve();
+        $context = $this->accountResolver->resolve(true, true);
+        if ($context['selection_required'] ?? false) {
+            return response()->json(['account' => null, 'customer' => $context['contact'] ? (new ContactResource($context['contact']))->resolve() : null,
+                'accounts' => $context['accounts'], 'selection_required' => true]);
+        }
 
         return response()->json([
             'customer' => $context['contact'] ? (new ContactResource($context['contact']))->resolve() : null,
-            'account'  => $this->resourceForAccount($context['account'], $context['account_type']),
+            'account'  => $this->resourceForAccount($context['account'], $context['account_type']) + [
+                'role' => $context['role'], 'capabilities' => $context['capabilities'],
+            ],
             'accounts' => $context['accounts'],
         ]);
+    }
+
+    public function select(Request $request)
+    {
+        $input = $request->validate(['account_uuid' => ['required', 'uuid']]);
+        $old = $request->headers->get('X-Customer-Account');
+        $request->headers->set('X-Customer-Account', $input['account_uuid']);
+        try {
+            $context = $this->accountResolver->resolve();
+            \Illuminate\Support\Facades\DB::connection(config('fleetbase.connection.db', 'mysql'))->table('portal_customer_accounts')
+                ->updateOrInsert(['company_uuid' => session('company'), 'user_uuid' => session('user')], ['account_uuid' => $context['account']->uuid]);
+            return $this->account();
+        } finally {
+            $old === null ? $request->headers->remove('X-Customer-Account') : $request->headers->set('X-Customer-Account', $old);
+        }
     }
 
     public function pickupAddress()
@@ -89,7 +110,8 @@ class AccountController extends Controller
         }
 
         if ($type === 'vendor') {
-            return array_merge((new VendorResource($account->loadMissing('personnels')))->resolve(), ['customer_type' => 'vendor']);
+            return ['id' => $account->public_id, 'uuid' => $account->uuid, 'name' => $account->name,
+                'email' => $account->email, 'phone' => $account->phone, 'photo_url' => $account->photo_url, 'customer_type' => 'vendor'];
         }
 
         return array_merge((new ContactResource($account))->resolve(), ['customer_type' => 'contact']);

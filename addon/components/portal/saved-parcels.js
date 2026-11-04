@@ -8,6 +8,7 @@ const API = { namespace: 'customer-portal/int/v1' };
 export default class PortalSavedParcelsComponent extends Component {
     @service fetch;
     @service notifications;
+    @service customerSession;
     @tracked parcels = [];
     @tracked nextPage = null;
     @tracked busy = false;

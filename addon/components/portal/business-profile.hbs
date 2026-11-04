@@ -1,0 +1,66 @@
+<section class="portal-account-card space-y-4" aria-label={{t "customer-business.title"}} {{did-update this.accountChanged this.customerSession.accountId}} data-test-business-profile>
+    <h3 class="font-semibold">{{t "customer-business.title"}}</h3>
+    <p>{{t "customer-business.explanation"}}</p>
+    <p class="text-sm text-gray-500 dark:text-gray-400">{{t "customer-business.history"}}</p>
+    {{#if this.error}}<p role="alert" class="text-red-600">{{this.error}}</p>{{/if}}
+    <Button @text={{t "customer-business.refresh"}} @onClick={{perform this.load}} @disabled={{this.busy}} />
+    {{#if this.load.isRunning}}<Spinner />{{/if}}
+    {{#if this.data}}
+        <p role="status" data-test-business-status>{{t this.statusKey}}</p>
+        {{#if this.data.review_note}}<p role="note">{{this.data.review_note}}</p>{{/if}}
+        {{#if this.data.can_submit}}
+            {{#if this.data.revision}}
+                <Portal::BusinessDocuments @profile={{this.data}} @editable={{this.editable}} @onChanged={{this.accountChanged}} />
+            {{/if}}
+        {{/if}}
+        {{#unless this.data.can_submit}}<p>{{t "customer-business.owner-only"}}</p>{{/unless}}
+        {{#if this.editable}}
+            <form aria-label={{t "customer-business.title"}} {{on "submit" this.review}}>
+                <fieldset disabled={{or this.busy this.reviewing}} class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <label class="block text-sm">
+                        {{t "customer-business.legal-form"}}
+                        <select class="form-select w-full" {{on "change" (fn this.update "legal_form")}} data-test-business-field="legal_form">
+                            {{#each this.formOptions as |form|}}<option value={{form.value}} selected={{eq this.draft.legal_form form.value}}>{{t form.label}}</option>{{/each}}
+                        </select>
+                    </label>
+                    <label class="block text-sm">
+                        {{t "customer-business.governorate"}}
+                        <select class="form-select w-full" {{on "change" (fn this.update "governorate")}} data-test-business-field="governorate">
+                            {{#each this.governorates as |governorate|}}<option selected={{eq this.draft.governorate governorate}}>{{governorate}}</option>{{/each}}
+                        </select>
+                    </label>
+                    <label class="flex items-center gap-2 text-sm md:col-span-2">
+                        <input type="checkbox" checked={{this.draft.rne_applicable}} {{on "change" (fn this.update "rne_applicable")}} data-test-business-rne />
+                        {{t "customer-business.rne-applicable"}}
+                    </label>
+                    {{#each this.fields as |field|}}
+                        <label class="block text-sm">
+                            {{t field.label}}
+                            <input
+                                class="form-input w-full mt-1"
+                                type={{field.type}}
+                                value={{field.value}}
+                                required={{field.required}}
+                                maxlength="500"
+                                {{on "input" (fn this.update field.name)}}
+                                data-test-business-field={{field.name}}
+                            />
+                        </label>
+                    {{/each}}
+                    <p class="text-xs text-gray-500 md:col-span-2">{{t "customer-business.tax-help"}}</p>
+                    <label class="flex items-start gap-2 text-sm md:col-span-2">
+                        <input type="checkbox" required checked={{this.declaration}} {{on "change" this.declare}} data-test-business-declaration />
+                        {{t "customer-business.declaration"}}
+                    </label>
+                </fieldset>
+                {{#if this.reviewing}}
+                    <p class="my-4">{{t "customer-business.review-help"}}</p>
+                    <Button @type="primary" @text={{t "customer-business.submit"}} @onClick={{perform this.save}} @disabled={{this.busy}} data-test-business-submit />
+                    <Button @text={{t "customer-business.edit"}} @onClick={{this.cancelReview}} @disabled={{this.busy}} data-test-business-edit />
+                {{else}}
+                    <Button @buttonType="submit" @text={{t "customer-business.review"}} @disabled={{or this.busy (not this.declaration)}} data-test-business-review />
+                {{/if}}
+            </form>
+        {{/if}}
+    {{/if}}
+</section>

@@ -10,7 +10,9 @@
             <button type="button" role="tab" aria-selected={{eq this.section "all"}} {{on "click" (fn this.selectSection "all")}}>{{t "customer-ux.all"}}</button>
             <button type="button" role="tab" aria-selected={{eq this.section "shipping"}} {{on "click" (fn this.selectSection "shipping")}}>{{t "customer-ux.shipping"}}</button>
             <button type="button" role="tab" aria-selected={{eq this.section "proof"}} {{on "click" (fn this.selectSection "proof")}}>{{t "customer-ux.proof"}}</button>
-            <button type="button" role="tab" aria-selected={{eq this.section "finance"}} {{on "click" (fn this.selectSection "finance")}}>{{t "customer-ux.invoice-documents"}}</button>
+            {{#if this.customerSession.capabilities.finance}}
+                <button type="button" role="tab" aria-selected={{eq this.section "finance"}} {{on "click" (fn this.selectSection "finance")}}>{{t "customer-ux.invoice-documents"}}</button>
+            {{/if}}
         </div>
     </div>
     <div class="next-table-wrapper no-scroll h-auto table-fluid portal-table-panel mt-5">

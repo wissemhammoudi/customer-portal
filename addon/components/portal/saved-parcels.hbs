@@ -4,7 +4,9 @@
             <h3 class="font-semibold dark:text-gray-100">Saved parcels</h3>
             <p class="text-sm text-gray-500">Private reusable templates shared with your mobile app. Editing or deleting a template never changes existing orders.</p>
         </div>
-        <Button @text="New saved parcel" @icon="plus" @type="primary" @disabled={{this.busy}} @onClick={{this.create}} />
+        {{#if this.customerSession.capabilities.resources_write}}
+            <Button @text="New saved parcel" @icon="plus" @type="primary" @disabled={{this.busy}} @onClick={{this.create}} />
+        {{/if}}
     </div>
     {{#if this.editing}}
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
@@ -56,8 +58,10 @@
                 </div>
                 <div class="flex flex-wrap gap-2">
                     {{#if @onSelect}}<Button @text="Add to order" @icon="plus" @size="xs" @disabled={{this.busy}} @onClick={{fn this.select template}} />{{/if}}
-                    <Button @text="Edit saved parcel" @icon="pencil" @size="xs" @disabled={{this.busy}} @onClick={{fn this.edit template}} />
-                    <Button @text="Delete saved parcel" @icon="trash" @type="danger" @size="xs" @disabled={{this.busy}} @onClick={{fn this.remove template}} />
+                    {{#if this.customerSession.capabilities.resources_write}}
+                        <Button @text="Edit saved parcel" @icon="pencil" @size="xs" @disabled={{this.busy}} @onClick={{fn this.edit template}} />
+                        <Button @text="Delete saved parcel" @icon="trash" @type="danger" @size="xs" @disabled={{this.busy}} @onClick={{fn this.remove template}} />
+                    {{/if}}
                 </div>
             </div>
         {{else}}

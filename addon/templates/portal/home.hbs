@@ -6,22 +6,28 @@
             <p>Track deliveries, invoices, documents, and support activity from one customer workspace.</p>
         </div>
         <div class="portal-dashboard-quick-actions">
-            <LinkTo @route="portal.orders.new" class="portal-quick-link primary">
-                <FaIcon @icon="plus" />
-                <span>{{t "customer-ux.create"}}</span>
-            </LinkTo>
+            {{#if this.customerSession.capabilities.orders_write}}
+                <LinkTo @route="portal.orders.new" class="portal-quick-link primary">
+                    <FaIcon @icon="plus" />
+                    <span>{{t "customer-ux.create"}}</span>
+                </LinkTo>
+            {{/if}}
             <LinkTo @route="portal.orders" class="portal-quick-link">
                 <FaIcon @icon="box" />
                 <span>{{t "customer-ux.view-orders"}}</span>
             </LinkTo>
-            <LinkTo @route="portal.support" class="portal-quick-link">
-                <FaIcon @icon="headset" />
-                <span>{{t "customer-ux.help"}}</span>
-            </LinkTo>
-            <LinkTo @route="portal.billing" class="portal-quick-link">
-                <FaIcon @icon="file-invoice-dollar" />
-                <span>{{t "customer-finances.title"}}</span>
-            </LinkTo>
+            {{#if this.customerSession.capabilities.support}}
+                <LinkTo @route="portal.support" class="portal-quick-link">
+                    <FaIcon @icon="headset" />
+                    <span>{{t "customer-ux.help"}}</span>
+                </LinkTo>
+            {{/if}}
+            {{#if this.customerSession.capabilities.finance}}
+                <LinkTo @route="portal.billing" class="portal-quick-link">
+                    <FaIcon @icon="file-invoice-dollar" />
+                    <span>{{t "customer-finances.title"}}</span>
+                </LinkTo>
+            {{/if}}
             <LinkTo @route="portal.documents" class="portal-quick-link">
                 <FaIcon @icon="folder-open" />
                 <span>Documents</span>

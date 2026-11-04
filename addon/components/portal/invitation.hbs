@@ -1,0 +1,24 @@
+<div class="portal-account-card space-y-4">
+    <h1 class="font-bold text-xl">{{t "customer-team.title"}}</h1>
+    {{#if this.error}}<p role="alert" class="text-red-600">{{this.error}}</p>{{/if}}
+    {{#if this.accepted}}
+        <p role="status">{{t "customer-team.created"}}</p>
+        <a href={{this.loginUrl}}>{{t "customer-team.sign-in"}}</a>
+    {{else if this.invitation}}
+        <p>{{this.invitation.company_name}} - {{this.invitation.role}}</p>
+        <p>{{this.invitation.name}} - {{this.invitation.email}}</p>
+        {{#if this.invitation.existing_login}}
+            <p>{{t "customer-team.existing-login"}}</p>
+            <a href={{this.loginUrl}}>{{t "customer-team.sign-in"}}</a>
+        {{else}}
+            <p>{{t "customer-team.password-help"}}</p>
+            <form class="space-y-4" {{on "submit" (perform this.accept)}}>
+                <InputGroup @name={{t "customer-team.password"}} @type="password" @value={{this.password}} />
+                <InputGroup @name={{t "customer-team.confirm-password"}} @type="password" @value={{this.confirmation}} />
+                <Button @buttonType="submit" @text={{t "customer-team.accept"}} @disabled={{this.accept.isRunning}} />
+            </form>
+        {{/if}}
+    {{else if this.load.isRunning}}
+        <Spinner />
+    {{/if}}
+</div>

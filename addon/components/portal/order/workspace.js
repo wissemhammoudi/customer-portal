@@ -6,6 +6,7 @@ import { ORDER_FILTERS } from '../../../utils/customer-parity';
 export default class PortalOrderWorkspaceComponent extends Component {
     @service hostRouter;
     @service customerPortalOrderCreation;
+    @service customerSession;
 
     get currentRouteName() {
         return this.hostRouter.currentRouteName ?? '';
