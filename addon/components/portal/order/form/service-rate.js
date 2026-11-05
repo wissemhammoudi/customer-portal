@@ -21,7 +21,7 @@ export default class PortalOrderFormServiceRateComponent extends Component {
             return {
                 model: serviceQuote,
                 id: identifierFor(serviceQuote),
-                serviceName: valueFor(serviceQuote, 'service_rate_name') ?? valueFor(serviceQuote, 'service_name') ?? valueFor(serviceQuote, 'public_id'),
+                serviceName: valueFor(serviceQuote, 'service_rate_name') ?? valueFor(serviceQuote, 'service_name') ?? 'Standard delivery',
                 requestId: valueFor(serviceQuote, 'request_id'),
                 amount: valueFor(serviceQuote, 'amount'),
                 currency,

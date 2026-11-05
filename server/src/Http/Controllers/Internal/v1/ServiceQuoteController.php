@@ -92,6 +92,10 @@ class ServiceQuoteController extends Controller
             $quoteIds = $this->queryAllowedServiceQuotes($request);
             // One delivery fee by parcel volume and governorate zone; keep a single quote and drop the rest.
             $quoteIds = array_slice($quoteIds, 0, 1);
+            if ($quoteIds === []) {
+                // The portal tariff sets the price, so a missing or unmatched fleetops service rate must not block quoting.
+                $quoteIds = [$this->createTariffQuote()->uuid];
+            }
             $fees = new PortalDeliveryFeeService();
             ServiceQuote::whereIn('uuid', $quoteIds)->get()->each(fn ($quote) => $fees->applyStandardFee($quote, $payload['entities'] ?? [], $payload));
             if ($serviceLevel === 'express') {
@@ -117,6 +121,18 @@ class ServiceQuoteController extends Controller
 
         return response()->json([
             'service_quotes' => ServiceQuoteResource::collection($quotes)->resolve(),
+        ]);
+    }
+
+    protected function createTariffQuote(): ServiceQuote
+    {
+        return ServiceQuote::create([
+            'request_id'   => ServiceQuote::generatePublicId('request'),
+            'company_uuid' => session('company'),
+            'amount'       => 0,
+            'currency'     => PortalDeliveryFeeService::CURRENCY,
+            'expired_at'   => now()->addMinutes(30),
+            'meta'         => [],
         ]);
     }
 
