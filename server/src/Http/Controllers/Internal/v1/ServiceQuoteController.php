@@ -90,10 +90,10 @@ class ServiceQuoteController extends Controller
             $quoteIds = [$quote->uuid];
         } else {
             $quoteIds = $this->queryAllowedServiceQuotes($request);
-            // One flat delivery fee by parcel volume; keep a single quote and drop the rest.
+            // One delivery fee by parcel volume and governorate zone; keep a single quote and drop the rest.
             $quoteIds = array_slice($quoteIds, 0, 1);
             $fees = new PortalDeliveryFeeService();
-            ServiceQuote::whereIn('uuid', $quoteIds)->get()->each(fn ($quote) => $fees->applyStandardFee($quote, $payload['entities'] ?? []));
+            ServiceQuote::whereIn('uuid', $quoteIds)->get()->each(fn ($quote) => $fees->applyStandardFee($quote, $payload['entities'] ?? [], $payload));
             if ($serviceLevel === 'express') {
                 ServiceQuote::whereIn('uuid', $quoteIds)->get()->each(fn ($quote) => $express->applyPrice($quote));
             }
