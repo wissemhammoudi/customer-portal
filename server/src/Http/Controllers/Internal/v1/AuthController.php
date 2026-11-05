@@ -7,6 +7,7 @@ use Fleetbase\Http\Requests\LoginRequest;
 use Fleetbase\Models\User;
 use Fleetbase\Support\Auth;
 use Fleetbase\Support\TwoFactorAuth;
+use Illuminate\Support\Carbon;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
@@ -61,6 +62,14 @@ class AuthController extends Controller
 
         if (Auth::isInvalidPassword($password, $user->password)) {
             return response()->error('These credentials do not match our records.', 401, ['code' => 'invalid_credentials']);
+        }
+
+        // Portal logins are only issued by staff (or by an accepted invitation) and the
+        // portal has no self-service confirmation step, so a correct staff-issued password
+        // confirms the channel the customer signed in with.
+        if ($user->isNotVerified()) {
+            $column = $user->phone !== null && $user->phone === $identity ? 'phone_verified_at' : 'email_verified_at';
+            $user->forceFill([$column => Carbon::now()])->save();
         }
 
         if (TwoFactorAuth::isEnabled($user)) {

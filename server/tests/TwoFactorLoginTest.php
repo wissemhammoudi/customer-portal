@@ -103,6 +103,8 @@ function portalTwoFactorBoot(): object
         $table->string('password')->nullable();
         $table->string('type')->nullable();
         $table->timestamp('email_verified_at')->nullable();
+        $table->timestamp('phone_verified_at')->nullable();
+        $table->timestamp('last_login')->nullable();
         $table->timestamp('deleted_at')->nullable();
         $table->timestamps();
     });
@@ -171,4 +173,22 @@ test('login starts the two-factor session once the password checks out', functio
         ->and($response->payload)->not->toHaveKey('token')
         ->and($env->redis->sets)->toHaveCount(1)
         ->and($env->redis->sets[0])->toStartWith('two_fa_session:' . PORTAL_2FA_CUSTOMER_UUID . ':');
+});
+
+test('a staff-issued login that was never confirmed signs in and gets confirmed by the correct password', function () {
+    $env = portalTwoFactorBoot();
+    $env->db->table('users')->where('uuid', PORTAL_2FA_CUSTOMER_UUID)->update(['email_verified_at' => null]);
+
+    $refused = portalLogin(['identity' => 'customer@example.test', 'password' => 'wrong-password']);
+
+    expect($refused->status)->toBe(401)
+        ->and($env->db->table('users')->where('uuid', PORTAL_2FA_CUSTOMER_UUID)->value('email_verified_at'))->toBeNull();
+
+    $response = portalLogin(['identity' => 'customer@example.test', 'password' => 'correct-password']);
+
+    expect($response->status)->toBe(200)
+        ->and($response->payload)->not->toHaveKey('code')
+        ->and($response->payload['twoFaSession'])->toBeString()->not->toBeEmpty()
+        ->and($env->db->table('users')->where('uuid', PORTAL_2FA_CUSTOMER_UUID)->value('email_verified_at'))->not->toBeNull()
+        ->and($env->db->table('users')->where('uuid', PORTAL_2FA_CUSTOMER_UUID)->value('phone_verified_at'))->toBeNull();
 });
