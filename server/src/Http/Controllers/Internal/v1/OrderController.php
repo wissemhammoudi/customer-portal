@@ -27,6 +27,8 @@ use Illuminate\Support\Facades\Log;
 use Fleetbase\FleetOps\Support\DeliveryOptions;
 use Fleetbase\FleetOps\Support\CollectionReadiness;
 use Fleetbase\FleetOps\Support\CollectionWorkflow;
+use Fleetbase\FleetOps\Support\CollectionHandovers;
+use Fleetbase\FleetOps\Support\CollectionRounds;
 use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
@@ -108,6 +110,29 @@ class OrderController extends Controller
         request()->validate(['pickup_date' => 'prohibited']);
         $order = $this->orderService->resolveOrder($id, $this->accountResolver->resolve());
         return response()->json(['collection' => CollectionReadiness::preview($order)]);
+    }
+
+    public function collectionHandover(string $id)
+    {
+        abort_unless(session('user') && !session('is_driver'), 403, 'An authenticated customer is required.');
+        $order = $this->orderService->resolveOrder($id, $this->accountResolver->resolve());
+
+        return response()->json(['handover' => CollectionHandovers::preview($order)]);
+    }
+
+    public function updateCollectionHandover(Request $request, string $id)
+    {
+        abort_unless(session('user') && !session('is_driver'), 403, 'An authenticated customer is required.');
+        $input = $request->validate([
+            'round_uuid' => 'required|string|max:64', 'stop_uuid' => 'required|string|max:255',
+            'action' => 'required|in:confirm,dispute', 'reason' => 'nullable|string|max:2000|required_if:action,dispute',
+            'request_id' => 'required|string|max:128',
+        ]);
+        $context = $this->accountResolver->resolve();
+        $order = CollectionRounds::customerHandover(session('company'),
+            fn () => $this->orderService->resolveOrder($id, $context, true), $input);
+
+        return response()->json(['handover' => CollectionHandovers::preview($order)]);
     }
 
     public function updateCollectionReadiness(Request $request, string $id)

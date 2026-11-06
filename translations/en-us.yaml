@@ -1,3 +1,25 @@
+pickup-handover:
+  title: Pickup handover
+  explanation: Confirm only the parcels you physically handed to the driver. This is not delivery confirmation or a COD payment.
+  awaiting_customer: Awaiting your confirmation
+  confirmed: Handover confirmed
+  disputed: Handover disputed — operations review required
+  refresh: Refresh pickup status
+  retry: Retry the same decision
+  load-error: Could not refresh pickup status. Please retry.
+  submit-error: Your decision could not be verified. Refresh to check the current status or safely retry the same decision.
+  driver: Driver
+  order-parcels: Order parcel total (across all pickups)
+  reported-at: Driver reported pickup
+  confirmed-at: Customer confirmed
+  disputed-at: Customer disputed
+  reason: Dispute reason
+  confirm: Confirm handover
+  dispute: Dispute pickup
+  send-dispute: Send dispute
+  confirm-title: Confirm physical handover?
+  confirm-question: Did you physically hand the parcels for this pickup to this driver? The parcel summary is order-wide, not an exact count for this stop. This decision is final and does not confirm delivery or COD payment.
+  no-pickups: No driver-reported pickups for confirmation.
 starter:
   extension-name: Starter
 customer-team:

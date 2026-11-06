@@ -1,3 +1,25 @@
+pickup-handover:
+  title: Remise des colis au chauffeur
+  explanation: Confirmez uniquement les colis physiquement remis au chauffeur. Ceci ne confirme ni la livraison ni un paiement contre remboursement.
+  awaiting_customer: En attente de votre confirmation
+  confirmed: Remise confirmée
+  disputed: Remise contestée — examen par les opérations requis
+  refresh: Actualiser les enlèvements
+  retry: Réessayer la même décision
+  load-error: Impossible de charger les enlèvements. Réessayez.
+  submit-error: Votre décision n'a pas pu être vérifiée. Actualisez le statut ou réessayez la même décision en toute sécurité.
+  driver: Chauffeur
+  order-parcels: Total des colis de la commande (tous enlèvements confondus)
+  reported-at: Enlèvement signalé par le chauffeur
+  confirmed-at: Confirmation du client
+  disputed-at: Contestation du client
+  reason: Motif de contestation
+  confirm: Confirmer la remise
+  dispute: Contester l'enlèvement
+  send-dispute: Envoyer la contestation
+  confirm-title: Confirmer la remise physique ?
+  confirm-question: Avez-vous physiquement remis les colis de cet enlèvement à ce chauffeur ? Le récapitulatif concerne toute la commande, pas le nombre exact à cet arrêt. Cette décision est définitive et ne confirme ni la livraison ni un paiement contre remboursement.
+  no-pickups: Aucun enlèvement signalé à confirmer.
 customer-team:
   selection-required: "Votre espace précédent n'est plus disponible. Choisissez un compte autorisé pour continuer."
   resend: "Renvoyer l'e-mail d'invitation"

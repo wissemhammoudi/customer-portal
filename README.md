@@ -51,6 +51,47 @@ cancellation. Existing orders and Returns are unchanged. Enrollment remains
 disabled until pickup rounds and depot custody are implemented; this is not a
 production activation or Express release.
 
+## Pickup handover dual confirmation
+
+After the driver reports a collected pickup, its physical stop status remains
+`collected`; a separate `stop.handover.status` becomes `awaiting_customer`.
+Customer confirmation never records delivery or COD and is not required for
+physical depot receipt. Legacy collected stops without a handover remain
+unchanged and cannot be retroactively confirmed.
+
+Authenticated owning accounts use `GET/POST
+customer-portal/int/v1/orders/{id}/collection-handover`. Both return
+`{handover:{pickups:[{round_uuid,stop_uuid,order_id,status,reported_at,
+confirmed_at?,disputed_at?,customer_uuid?,driver:{name},parcels:[{name,quantity}],
+reason?,contact?:{name,street1,street2,city}}]}}`. The optional contact is a
+snapshot of that stop only, never another order's address.
+Each entry is one reported stop; `parcels` is the frozen **order
+parcel total across all pickups**, not a guaranteed per-stop contents manifest.
+Reports remain readable/actionable after depot receipt or round completion.
+
+POST requires `{round_uuid,stop_uuid,action:"confirm"|"dispute",request_id,
+reason?}`; disputes require a nonblank reason (maximum 2,000 characters).
+The customer decision is final. Retain the same request ID and exact action/reason
+for an uncertain-network retry: exact replay by the same actor succeeds without
+another history entry/revision; changed retries or another terminal decision
+return HTTP 409. IDs are scoped to a round/stop and actor/customer identity.
+Missing ownership or a foreign tenant/stop returns 404; driver sessions cannot
+confirm as customers. Tenant, round and order are locked in the same order as
+driver operations. Each successful decision increments the round revision, so
+drivers/dispatchers must refresh after a stale-revision conflict.
+
+Round stop metadata, the order's handover projection and timestamp/actor audit
+history are committed atomically, using existing JSON columns (no migration).
+The web details panel explains the order-wide parcel summary, asks for explicit
+physical handover confirmation, requires a dispute reason, retains failed request
+IDs for retries while mounted, and refreshes on focus/every 30 seconds when visible
+until all reports are final. Dispatchers see awaiting/disputed statuses and dispute
+reasons in each round's stop details; disputes require operational review and
+never silently remove physical custody.
+
+Deploy the FleetOps and customer-portal packages plus host API changes together
+and rebuild the Console.
+
 ## Features
 
 ### Saved parcel templates (Colab Express deployment)

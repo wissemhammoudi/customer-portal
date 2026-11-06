@@ -6,6 +6,7 @@
         {{/each}}
         {{#if this.workflow.original_payload_uuid}}
             <p>Your original collection contacts are preserved. The active delivery route starts at our depot; this is the same order, not a second charge.</p>
+            <Portal::Order::CollectionHandover @order={{@order}} />
         {{/if}}
         {{#if this.plannedPickup}}<p>Planned pickup: {{this.plannedPickup}}</p>{{/if}}
         {{#if this.workflow.planned_delivery_date}}

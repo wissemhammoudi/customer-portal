@@ -1,0 +1,56 @@
+<section class="p-4 space-y-3" aria-label={{t "pickup-handover.title"}} {{did-insert this.reset}} {{did-update this.reset @order.uuid}} data-test-pickup-handover>
+    <h3>{{t "pickup-handover.title"}}</h3>
+    <p>{{t "pickup-handover.explanation"}}</p>
+    <button type="button" disabled={{or this.refresh.isRunning this.submit.isRunning}} {{on "click" (perform this.refresh)}} data-test-handover-refresh>
+        {{t "pickup-handover.refresh"}}
+    </button>
+    {{#if this.error}}
+        <p role="alert" data-test-handover-error>{{t this.error}}</p>
+    {{/if}}
+    {{#if this.pending}}
+        <button type="button" disabled={{this.submit.isRunning}} {{on "click" this.retry}} data-test-handover-retry>{{t "pickup-handover.retry"}}</button>
+    {{/if}}
+    {{#each this.pickups as |pickup|}}
+        <article class="border rounded p-3 space-y-2" data-test-handover-stop={{pickup.stop_uuid}}>
+            <p>{{pickup.order_id}} — {{t pickup.statusKey}}</p>
+            {{#if pickup.contact}}
+                <p>{{pickup.contact.name}} — {{pickup.contact.street1}} {{pickup.contact.street2}} {{pickup.contact.city}}</p>
+            {{/if}}
+            <p>{{t "pickup-handover.driver"}}: {{pickup.driver.name}}</p>
+            <p>{{t "pickup-handover.reported-at"}}: {{pickup.reported_at}}</p>
+            <p>{{t "pickup-handover.order-parcels"}}</p>
+            {{#each pickup.parcels as |parcel|}}<p>{{parcel.name}} × {{parcel.quantity}}</p>{{/each}}
+            {{#if pickup.confirmed_at}}<p>{{t "pickup-handover.confirmed-at"}}: {{pickup.confirmed_at}}</p>{{/if}}
+            {{#if pickup.disputed_at}}<p>{{t "pickup-handover.disputed-at"}}: {{pickup.disputed_at}}</p>{{/if}}
+            {{#if pickup.reason}}<p>{{t "pickup-handover.reason"}}: {{pickup.reason}}</p>{{/if}}
+            {{#if pickup.awaiting}}
+                <button type="button" disabled={{or this.submit.isRunning this.pending}} {{on "click" (fn this.confirm pickup)}} data-test-handover-confirm>
+                    {{t "pickup-handover.confirm"}}
+                </button>
+                <button type="button" disabled={{or this.submit.isRunning this.pending}} {{on "click" (fn this.dispute pickup)}} data-test-handover-dispute>
+                    {{t "pickup-handover.dispute"}}
+                </button>
+                {{#if (eq this.selected pickup.key)}}
+                    <label>
+                        {{t "pickup-handover.reason"}}
+                        <textarea
+                            maxlength="2000"
+                            value={{this.reason}}
+                            disabled={{or this.submit.isRunning this.pending}}
+                            {{on "input" this.setReason}}
+                            data-test-handover-reason
+                        ></textarea>
+                    </label>
+                    <button
+                        type="button"
+                        disabled={{or this.submit.isRunning this.pending (not this.reason)}}
+                        {{on "click" (perform this.submit pickup "dispute" this.reason)}}
+                        data-test-handover-submit-dispute
+                    >{{t "pickup-handover.send-dispute"}}</button>
+                {{/if}}
+            {{/if}}
+        </article>
+    {{else}}
+        {{#unless this.refresh.isRunning}}<p>{{t "pickup-handover.no-pickups"}}</p>{{/unless}}
+    {{/each}}
+</section>

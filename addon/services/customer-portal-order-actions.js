@@ -127,6 +127,16 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
         );
     }
 
+    async collectionHandover(order) {
+        const response = await this.fetch.get(`orders/${encodeURIComponent(this.identifier(order))}/collection-handover`, {}, { namespace: NAMESPACE });
+        return response.handover;
+    }
+
+    async setCollectionHandover(order, decision) {
+        const response = await this.fetch.post(`orders/${encodeURIComponent(this.identifier(order))}/collection-handover`, decision, { namespace: NAMESPACE });
+        return response.handover;
+    }
+
     identifier(order) {
         return order?.uuid ?? order?.public_id ?? order?.id;
     }
