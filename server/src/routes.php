@@ -88,6 +88,7 @@ Route::prefix(config('customer-portal.api.routing.prefix', 'customer-portal'))->
                                 $router->post('orders/{id}/cancel', 'OrderController@cancelOrder');
                                 $router->post('orders/{id}/reschedule', 'OrderController@rescheduleOrder');
                                 $router->get('orders/{id}/collection-readiness', 'OrderController@collectionReadiness');
+                                $router->get('orders/{id}/pickup-tracking', 'OrderController@pickupTracking');
                                 $router->post('orders/{id}/collection-readiness', 'OrderController@updateCollectionReadiness');
                                 $router->post('orders/{id}/files', 'OrderController@attachFiles');
                                 $router->delete('orders/{id}/files/{file}', 'OrderController@deleteFile');

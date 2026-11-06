@@ -120,6 +120,14 @@ class OrderController extends Controller
         return response()->json(['handover' => CollectionHandovers::preview($order)]);
     }
 
+    public function pickupTracking(string $id)
+    {
+        abort_unless(session('user') && !session('is_driver'), 403, 'An authenticated customer is required.');
+        $order = $this->orderService->resolveOrder($id, $this->accountResolver->resolve());
+
+        return response()->json(['tracking' => \Fleetbase\FleetOps\Support\CollectionPickupTracking::read($order)])->header('Cache-Control', 'no-store');
+    }
+
     public function updateCollectionHandover(Request $request, string $id)
     {
         abort_unless(session('user') && !session('is_driver'), 403, 'An authenticated customer is required.');
