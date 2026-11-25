@@ -2,10 +2,7 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { later } from '@ember/runloop';
-import { timeout } from 'ember-concurrency';
 import { isBlank } from '@ember/utils';
-import config from 'ember-get-config';
 import { validPickup, hasPhone } from '../../../utils/customer-order-policy';
 
 export default class PortalOrderFormComponent extends Component {
@@ -13,16 +10,12 @@ export default class PortalOrderFormComponent extends Component {
     @service customerPortalOrderCreation;
     @service customerPortalOrderValidation;
     @service deliveryOptions;
-    @service customerPayment;
     @service currentUser;
     @service hostRouter;
-    @service modalsManager;
     @service notifications;
-    @service urlSearchParams;
     @service intl;
 
     @tracked lastQuotedRevision = null;
-    @tracked checkoutStarting = false;
     @tracked step = 0;
     @tracked showAdditional = false;
 
@@ -36,7 +29,7 @@ export default class PortalOrderFormComponent extends Component {
 
     get canContinue() {
         const payload = this.draft?.payload ?? {};
-        if (this.draft?.blockedReason || this.draft?.pickupChanged || this.checkoutStarting || this.customerPortalOrderActions.createOrder.isRunning) return false;
+        if (this.draft?.blockedReason || this.draft?.pickupChanged || this.customerPortalOrderActions.createOrder.isRunning) return false;
         if (this.step === 0) {
             if (this.draft?.meta?.delivery?.original_order_uuid && !this.draft.returnAddressesConfirmed) return false;
             if (this.draft?.isMultipleDropoffOrder) return payload.waypoints?.length >= 2 && payload.waypoints.every((stop) => validPickup(stop.place));
@@ -62,7 +55,7 @@ export default class PortalOrderFormComponent extends Component {
     }
 
     @action previousStep() {
-        if (this.step > 0 && !this.checkoutStarting && !this.customerPortalOrderActions.createOrder.isRunning) this.step--;
+        if (this.step > 0 && !this.customerPortalOrderActions.createOrder.isRunning) this.step--;
     }
 
     @action toggleAdditional() {
@@ -74,7 +67,7 @@ export default class PortalOrderFormComponent extends Component {
     }
 
     get canSubmit() {
-        return this.customerPortalOrderValidation.canCreate(this.draft) && !this.checkoutStarting && !this.isLoadingServiceQuotes && !this.customerPortalOrderActions.createOrder.isRunning;
+        return this.customerPortalOrderValidation.canCreate(this.draft) && !this.isLoadingServiceQuotes && !this.customerPortalOrderActions.createOrder.isRunning;
     }
 
     get isLoadingServiceQuotes() {
@@ -89,43 +82,22 @@ export default class PortalOrderFormComponent extends Component {
         return this.draft?.quoteRevision;
     }
 
-    get paymentConfig() {
-        return this.draft?.paymentConfig ?? {};
-    }
-
     get selectedServiceQuoteId() {
         const serviceQuote = this.draft?.serviceQuote;
         return serviceQuote?.uuid ?? serviceQuote?.id ?? serviceQuote;
     }
 
-    get isPaymentRequired() {
-        const hasServiceQuote = !isBlank(this.selectedServiceQuoteId);
-        const stripeConfigured = typeof config.stripe?.publishableKey === 'string';
-        const paymentsEnabled = this.paymentConfig.paymentsEnabled === true;
-        const paymentsOnboardCompleted = this.paymentConfig.paymentsOnboardCompleted === true;
-
-        return hasServiceQuote && stripeConfigured && paymentsEnabled && paymentsOnboardCompleted;
+    get hasServiceQuote() {
+        return !isBlank(this.selectedServiceQuoteId);
     }
 
     @action async initialize() {
-        try {
-            const paymentConfig = await this.customerPortalOrderActions.loadPaymentConfig.perform();
-            this.customerPortalOrderCreation.setField('paymentConfig', paymentConfig ?? {});
-
-            if (this.shouldInitializeStripe(paymentConfig)) {
-                await this.customerPayment.loadAndInitialize();
-            }
-        } catch (error) {
-            this.notifications.serverError(error);
-        }
-
         await this.deliveryOptions.load.perform();
-        await this.checkForCheckoutSession();
         await this.refreshServiceQuotes();
     }
 
     @action async refreshServiceQuotes() {
-        if (!this.canQuote || this.urlSearchParams.has('checkout_session_id')) {
+        if (!this.canQuote) {
             return;
         }
 
@@ -162,17 +134,10 @@ export default class PortalOrderFormComponent extends Component {
     }
 
     @action async submit() {
-        if (this.urlSearchParams.has('checkout_session_id') && !this.draft?.purchaseRate) {
-            return this.checkForCheckoutSession();
-        }
         if (!this.canSubmit) {
             return this.notifications.warning(
                 'Complete the route, named parcels and packaging, COD and proof settings. Select a current delivery quote and wait for document uploads to finish.'
             );
-        }
-
-        if (this.isPaymentRequired && !this.draft?.purchaseRate) {
-            return this.startCheckoutSession();
         }
 
         try {
@@ -184,137 +149,5 @@ export default class PortalOrderFormComponent extends Component {
         } catch (error) {
             this.notifications.serverError(error);
         }
-    }
-
-    async startCheckoutSession() {
-        if (this.checkoutStarting) return;
-        this.checkoutStarting = true;
-        try {
-            const { draft: saved } = await this.customerPortalOrderActions.saveCheckoutDraft(this.draft);
-            this.customerPortalOrderCreation.setField('checkoutDraftUuid', saved.uuid);
-            const url = new URL(window.location.href);
-            url.searchParams.set('checkout_draft', saved.uuid);
-            window.history.replaceState(window.history.state, '', url);
-            this.saveCurrentOrderForCurrentServiceQuote(this.draft.serviceQuote);
-            await this.customerPayment.loadAndInitialize();
-            const checkout = await this.customerPayment.initEmbeddedCheckout({
-                fetchClientSecret: this.fetchClientSecret.bind(this),
-            });
-            const serviceQuote = this.draft.serviceQuote;
-
-            this.saveCurrentOrderForCurrentServiceQuote(serviceQuote);
-            await this.modalsManager.done();
-            later(
-                this,
-                () => {
-                    this.modalsManager.show('modals/service-quote-purchase-form', {
-                        title: `Complete Payment for ${this.draft.orderConfig?.name ?? 'Order'} Service`,
-                        modalClass: 'service-quote-extension-purchase',
-                        modalFooterClass: 'hidden-i',
-                        serviceQuote,
-                        checkoutElementInserted: (el) => checkout.mount(el),
-                        decline: async (modal) => {
-                            checkout.destroy();
-                            await modal.done();
-                        },
-                    });
-                },
-                100
-            );
-        } catch (error) {
-            this.notifications.serverError(error, 'Unable to initialize secure checkout. Please try again.');
-        } finally {
-            this.checkoutStarting = false;
-        }
-    }
-
-    async fetchClientSecret() {
-        const uri = `${window.location.pathname}?checkout_draft=${encodeURIComponent(this.draft.checkoutDraftUuid)}`;
-        const { clientSecret } = await this.customerPortalOrderActions.createStripeCheckoutSession.perform(this.draft.serviceQuote, uri);
-        return clientSecret;
-    }
-
-    async checkForCheckoutSession() {
-        if (!this.urlSearchParams.has('checkout_session_id') || !this.urlSearchParams.has('service_quote')) {
-            return;
-        }
-
-        const checkoutSessionId = this.urlSearchParams.get('checkout_session_id');
-        const serviceQuoteId = this.urlSearchParams.get('service_quote');
-
-        this.restoreDraftForServiceQuote(serviceQuoteId);
-        if (this.selectedServiceQuoteId !== serviceQuoteId) {
-            this.notifications.error('Something went wrong trying to complete purchase.');
-            return;
-        }
-
-        await this.modalsManager.done();
-        this.modalsManager.show('modals/confirm-service-quote-purchase', {
-            title: 'Finalizing Purchase',
-            modalClass: 'finalize-service-quote-purchase',
-            loadingMessage: 'Completing purchase do not refresh or exit window...',
-            modalFooterClass: 'hidden-i',
-            backdropClose: false,
-        });
-        await timeout(300);
-
-        try {
-            const { status, purchaseRate } = await this.customerPortalOrderActions.getStripeCheckoutSessionStatus.perform(this.draft.serviceQuote, checkoutSessionId);
-            if (purchaseRate) {
-                this.customerPortalOrderCreation.setField('purchaseRate', purchaseRate);
-            }
-
-            if (status === 'complete' || status === 'purchase_complete') {
-                if (!purchaseRate) throw new Error('Payment confirmation is missing. Retry without starting another payment.');
-                const order = await this.submit();
-                if (order) {
-                    this.urlSearchParams.removeParamFromCurrentUrl('checkout_session_id');
-                    this.urlSearchParams.removeParamFromCurrentUrl('service_quote');
-                    this.urlSearchParams.removeParamFromCurrentUrl('checkout_draft');
-                    this.currentUser.setOption(`order:state:${serviceQuoteId}`, undefined);
-                }
-            } else if (status === 'open' || status === 'expired') {
-                this.urlSearchParams.removeParamFromCurrentUrl('checkout_session_id');
-                this.urlSearchParams.removeParamFromCurrentUrl('service_quote');
-                this.notifications.warning('Checkout is not complete. Your delivery draft is retained; you can retry payment.');
-            }
-        } catch (error) {
-            this.notifications.serverError(error);
-        } finally {
-            await this.modalsManager.done();
-        }
-    }
-
-    saveCurrentOrderForCurrentServiceQuote(serviceQuote) {
-        if (this.draft?.checkoutDraftUuid) return;
-        const serviceQuoteId = serviceQuote?.uuid ?? serviceQuote?.id;
-        if (!serviceQuoteId) {
-            return;
-        }
-
-        this.currentUser.setOption(`order:state:${serviceQuoteId}`, {
-            draft: this.draft,
-            serviceQuote,
-        });
-    }
-
-    restoreDraftForServiceQuote(serviceQuoteId) {
-        if (this.draft?.checkoutDraftUuid) return;
-        const state = this.currentUser.getOption(`order:state:${serviceQuoteId}`);
-        if (!state?.draft) {
-            this.customerPortalOrderCreation.setField('serviceQuote', { uuid: serviceQuoteId });
-            return;
-        }
-
-        this.customerPortalOrderCreation.draft = {
-            ...state.draft,
-            serviceQuote: state.serviceQuote ?? state.draft.serviceQuote,
-            serviceQuotes: state.draft.serviceQuotes?.length ? state.draft.serviceQuotes : [state.serviceQuote].filter(Boolean),
-            purchaseRate: null,
-        };
-    }
-
-    shouldInitializeStripe(paymentConfig = {}) {
-        return paymentConfig.paymentsEnabled === true && paymentConfig.paymentsOnboardCompleted === true && typeof config.stripe?.publishableKey === 'string';
     }
 }

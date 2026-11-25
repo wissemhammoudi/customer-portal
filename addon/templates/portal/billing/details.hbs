@@ -12,12 +12,6 @@
         </div>
         <div class="portal-invoice-actions">
             <Portal::InvoicePdfActions @invoice={{this.invoice}} />
-            {{#if this.isPayable}}
-                <a href={{this.paymentUrl}} target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">
-                    <FaIcon @icon="arrow-up-right-from-square" class="mr-2" />
-                    <span>Open Payment Link</span>
-                </a>
-            {{/if}}
         </div>
     </div>
 

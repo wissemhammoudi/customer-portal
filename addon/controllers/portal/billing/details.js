@@ -40,16 +40,4 @@ export default class PortalBillingDetailsController extends Controller {
     get balanceAmount() {
         return Number(this.invoice?.balance ?? 0);
     }
-
-    get isPayable() {
-        const status = String(this.invoice?.status ?? '').toLowerCase();
-        return this.invoiceIdentifier && this.balanceAmount > 0 && !['paid', 'void', 'cancelled', 'canceled'].includes(status);
-    }
-
-    get paymentUrl() {
-        if (!this.invoice?.public_id) return null;
-
-        const origin = window.location.origin;
-        return `${origin}/~/invoice?id=${this.invoice.public_id}`;
-    }
 }

@@ -78,38 +78,6 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
         return yield this.fetch.post('service-quotes/preliminary', this.serializeQuoteRequest(draft), normalizeOptions('service-quote'));
     }
 
-    @task *loadPaymentConfig() {
-        return yield this.fetch.get('payments/config', {}, { namespace: NAMESPACE });
-    }
-
-    @task *createStripeCheckoutSession(serviceQuote, uri) {
-        return yield this.fetch.post(
-            'service-quotes/stripe-checkout-session',
-            {
-                service_quote: this.identifier(serviceQuote),
-                uri,
-            },
-            { namespace: NAMESPACE }
-        );
-    }
-
-    @task *getStripeCheckoutSessionStatus(serviceQuote, checkoutSessionId) {
-        const response = yield this.fetch.get(
-            'service-quotes/stripe-checkout-session',
-            {
-                service_quote: this.identifier(serviceQuote),
-                checkout_session_id: checkoutSessionId,
-            },
-            { namespace: NAMESPACE }
-        );
-
-        if (response?.purchaseRate) {
-            response.purchaseRate = this.fetch.jsonToModel(response.purchaseRate, 'purchase-rate');
-        }
-
-        return response;
-    }
-
     @task *cancelOrder(order) {
         return yield this.fetch.post(`orders/${this.identifier(order)}/cancel`, {}, normalizeOptions('order'));
     }

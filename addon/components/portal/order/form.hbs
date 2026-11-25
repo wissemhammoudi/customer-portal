@@ -6,7 +6,7 @@
                     <Button
                         @icon="check"
                         @type="primary"
-                        @text={{if this.isPaymentRequired (t "customer-ux.continue-payment") (t "customer-ux.create")}}
+                        @text={{t "customer-ux.create"}}
                         @onClick={{this.submit}}
                         @isLoading={{this.customerPortalOrderActions.createOrder.isRunning}}
                         @disabled={{not this.canSubmit}}
@@ -66,7 +66,7 @@
                     {{/unless}}
                 {{/if}}
                 <Button
-                    @text={{if this.isPaymentRequired (t "customer-ux.continue-payment") (t "customer-ux.create")}}
+                    @text={{t "customer-ux.create"}}
                     @type="primary"
                     @onClick={{this.submit}}
                     @disabled={{not this.canSubmit}}
@@ -80,7 +80,7 @@
             {{#if this.step}}<Button
                     @text={{t "customer-ux.back"}}
                     @onClick={{this.previousStep}}
-                    @disabled={{or this.checkoutStarting this.customerPortalOrderActions.createOrder.isRunning}}
+                    @disabled={{this.customerPortalOrderActions.createOrder.isRunning}}
                     data-test-order-back
                 />{{/if}}
             <Spacer @height="40px" />
