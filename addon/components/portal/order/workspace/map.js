@@ -1,6 +1,8 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
+import { getBrowserCurrentLocation } from '../../../../utils/current-location';
 
 /**
  * The keyless OpenStreetMap tile server, the same default Fleet-Ops uses. CARTO's
@@ -12,6 +14,9 @@ export const ORDER_MAP_TILE_ATTRIBUTION = '&copy; <a href="https://www.openstree
 
 export default class PortalOrderWorkspaceMapComponent extends Component {
     @service customerPortalOrderRoutePreview;
+    @service notifications;
+
+    @tracked isLocating = false;
 
     tileUrl = ORDER_MAP_TILE_URL;
     tileAttribution = ORDER_MAP_TILE_ATTRIBUTION;
@@ -21,12 +26,16 @@ export default class PortalOrderWorkspaceMapComponent extends Component {
         this.customerPortalOrderRoutePreview.unregisterMap();
     }
 
+    get hasUserLocation() {
+        return Boolean(this.customerPortalOrderRoutePreview.userLocation);
+    }
+
     get center() {
         const firstMarker = this.markers[0];
 
         return {
-            latitude: Number(firstMarker?.latitude) || 1.3521,
-            longitude: Number(firstMarker?.longitude) || 103.8198,
+            latitude: Number(firstMarker?.latitude) || 33.8869,
+            longitude: Number(firstMarker?.longitude) || 9.5375,
         };
     }
 
@@ -139,5 +148,22 @@ export default class PortalOrderWorkspaceMapComponent extends Component {
 
         this.customerPortalOrderRoutePreview.clearSelectedOrder();
         this.customerPortalOrderRoutePreview.updateDraft(this.args.draft);
+    }
+
+    @action async locateUser() {
+        if (this.isLocating) {
+            return;
+        }
+
+        this.isLocating = true;
+
+        try {
+            const location = await getBrowserCurrentLocation();
+            this.customerPortalOrderRoutePreview.showUserLocation(location.latitude, location.longitude, location.accuracy);
+        } catch (error) {
+            this.notifications.warning(error?.message || 'Unable to determine your current location.');
+        } finally {
+            this.isLocating = false;
+        }
     }
 }

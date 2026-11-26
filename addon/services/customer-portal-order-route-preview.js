@@ -17,7 +17,9 @@ export default class CustomerPortalOrderRoutePreviewService extends Service {
     @tracked selectedOrderRoutePoints = [];
     @tracked routeCoordinates = [];
     @tracked routingError;
+    @tracked userLocation = null;
     routingControl;
+    userLocationLayer = null;
     signature;
 
     @action registerMap(eventOrMap) {
@@ -28,12 +30,83 @@ export default class CustomerPortalOrderRoutePreviewService extends Service {
         }
 
         this.map = map;
+        if (this.userLocation) {
+            this.renderUserLocation(this.userLocation, false);
+        }
         requestAnimationFrame(() => map.invalidateSize());
     }
 
     @action unregisterMap() {
+        this.removeUserLocationLayer();
         this.clear();
         this.map = null;
+    }
+
+    @action showUserLocation(latitude, longitude, accuracy = null) {
+        const next = {
+            latitude: Number(latitude),
+            longitude: Number(longitude),
+            accuracy: typeof accuracy === 'number' && Number.isFinite(accuracy) ? accuracy : null,
+        };
+
+        if (!Number.isFinite(next.latitude) || !Number.isFinite(next.longitude)) {
+            return;
+        }
+
+        this.userLocation = next;
+        this.renderUserLocation(next, true);
+    }
+
+    renderUserLocation(location, centerMap = true) {
+        const L = globalThis.L;
+
+        if (!this.map || !L) {
+            return;
+        }
+
+        this.removeUserLocationLayer();
+
+        const radius = Math.min(Math.max(location.accuracy ?? 45, 25), 250);
+        const layer = L.layerGroup();
+
+        if (typeof L.circle === 'function') {
+            L.circle([location.latitude, location.longitude], {
+                radius,
+                color: '#2563eb',
+                weight: 1,
+                fillColor: '#2563eb',
+                fillOpacity: 0.14,
+                interactive: false,
+            }).addTo(layer);
+        }
+
+        if (typeof L.circleMarker === 'function') {
+            L.circleMarker([location.latitude, location.longitude], {
+                radius: 8,
+                color: '#ffffff',
+                weight: 3,
+                fillColor: '#2563eb',
+                fillOpacity: 1,
+            })
+                .bindTooltip('Your location', { direction: 'top', offset: [0, -8] })
+                .addTo(layer);
+        }
+
+        layer.addTo(this.map);
+        this.userLocationLayer = layer;
+
+        if (centerMap && typeof this.map.flyTo === 'function') {
+            const zoom = Math.max(this.map.getZoom?.() ?? 11, 15);
+            this.map.flyTo([location.latitude, location.longitude], zoom, { animate: true, duration: 0.5 });
+        }
+    }
+
+    removeUserLocationLayer() {
+        if (this.userLocationLayer) {
+            this.userLocationLayer.clearLayers?.();
+            this.userLocationLayer.remove?.();
+            this.userLocationLayer = null;
+        }
     }
 
     get centerCoordinates() {

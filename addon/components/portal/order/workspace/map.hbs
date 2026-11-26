@@ -19,4 +19,7 @@
             </layers.marker>
         {{/each}}
     </LeafletMap>
+    <button type="button" class="portal-order-map-locate-btn {{if this.hasUserLocation 'is-located'}} {{if this.isLocating 'is-locating'}}" aria-label="Show my location" title="Show my location" disabled={{this.isLocating}} {{on "click" this.locateUser}}>
+        <FaIcon @icon="location-crosshairs" @spin={{this.isLocating}} />
+    </button>
 </section>

@@ -4,6 +4,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { restartableTask, timeout } from 'ember-concurrency';
 import { hasPhone, validPickup } from '../../../../utils/customer-order-policy';
+import { getBrowserCurrentLocation } from '../../../../utils/current-location';
 
 export default class PortalOrderFormRouteComponent extends Component {
     @service customerPortalOrderActions;
@@ -14,6 +15,7 @@ export default class PortalOrderFormRouteComponent extends Component {
 
     @tracked createdPlaces = [];
     @tracked placeFormContext;
+    @tracked isLocating = false;
 
     get places() {
         return [...this.createdPlaces, ...(this.args.places ?? [])];
@@ -47,6 +49,14 @@ export default class PortalOrderFormRouteComponent extends Component {
         if (this.isLinkedReturn) return [];
         const buttons = [
             {
+                text: this.isLocating ? 'Locating...' : 'My Location',
+                icon: 'location-crosshairs',
+                size: 'xs',
+                wrapperClass: 'portal-order-panel-action-button',
+                disabled: this.isLocating,
+                onClick: () => this.useCurrentLocation(this.editableField),
+            },
+            {
                 text: 'New Address',
                 icon: 'plus',
                 size: 'xs',
@@ -56,6 +66,51 @@ export default class PortalOrderFormRouteComponent extends Component {
         ];
 
         return buttons;
+    }
+
+    @action async useCurrentLocation(field, index = null) {
+        if (this.isLinkedReturn || field !== this.editableField || this.isLocating) {
+            return;
+        }
+
+        this.isLocating = true;
+
+        try {
+            const { latitude, longitude, accuracy } = await getBrowserCurrentLocation();
+            this.customerPortalOrderRoutePreview.showUserLocation(latitude, longitude, accuracy);
+
+            let resolved = {};
+            try {
+                const response = await this.customerPortalOrderActions.reverseGeocode(latitude, longitude);
+                if (response?.place && typeof response.place === 'object') {
+                    resolved = response.place;
+                }
+            } catch {
+                // Keep raw GPS coordinates even if reverse geocoding is unavailable.
+            }
+
+            const place = {
+                ...resolved,
+                latitude,
+                longitude,
+                location: { type: 'Point', coordinates: [longitude, latitude] },
+                country: resolved.country || 'TN',
+            };
+
+            this.placeFormContext = { field, index, mode: 'create' };
+            this.modalsManager.show('modals/portal-order-place-form', {
+                title: 'New Address',
+                modalClass: 'modal-md',
+                acceptButtonText: 'Save Address',
+                declineButtonText: 'Cancel',
+                place,
+                confirm: () => this.savePlace(place),
+            });
+        } catch (error) {
+            this.notifications.warning(error?.message || 'Unable to determine your current location.');
+        } finally {
+            this.isLocating = false;
+        }
     }
 
     get waypointRouteStops() {

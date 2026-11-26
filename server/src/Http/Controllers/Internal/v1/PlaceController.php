@@ -56,6 +56,33 @@ class PlaceController extends Controller
         return response()->json(PlaceResource::collection($results)->resolve());
     }
 
+    public function reverse(Request $request)
+    {
+        $request->validate([
+            'latitude'  => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        $latitude  = (float) $request->input('latitude');
+        $longitude = (float) $request->input('longitude');
+        $place     = PlaceSearch::geocode(null, $latitude, $longitude)->first();
+
+        if (!$place instanceof Place) {
+            try {
+                $address = Geocoder::reverse($latitude, $longitude)->get()->first();
+                if ($address) {
+                    $place = Place::createFromGoogleAddress($address);
+                }
+            } catch (\Throwable) {
+                $place = null;
+            }
+        }
+
+        return response()->json([
+            'place' => $place instanceof Place ? (new PlaceResource($place))->resolve() : null,
+        ]);
+    }
+
     public function create(Request $request)
     {
         $this->normalizeCoordinates($request);

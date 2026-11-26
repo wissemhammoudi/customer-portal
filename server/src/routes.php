@@ -77,6 +77,7 @@ Route::prefix(config('customer-portal.api.routing.prefix', 'customer-portal'))->
                                 $router->put('checkout-drafts/{id}', 'OrderController@saveCheckoutDraft');
                                 $router->get('places/search', 'PlaceController@search');
                                 $router->get('places/lookup', 'PlaceController@lookup');
+                                $router->get('places/reverse', 'PlaceController@reverse');
                                 $router->post('places', 'PlaceController@create');
                                 $router->patch('places/{id}', 'PlaceController@update');
                                 $router->delete('places/{id}', 'PlaceController@delete');

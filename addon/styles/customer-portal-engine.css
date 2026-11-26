@@ -2491,6 +2491,57 @@ body[data-theme='dark'].fleetbase-portal .portal-order-map {
     z-index: 20;
 }
 
+.fleetbase-portal .portal-order-map-locate-btn {
+    position: absolute;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 30;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 9999px;
+    background: #fff;
+    color: #0f172a;
+    box-shadow: 0 0.5rem 1.25rem rgb(15 23 42 / 22%);
+    cursor: pointer;
+    transition:
+        transform 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease,
+        background-color 0.15s ease;
+}
+
+.fleetbase-portal .portal-order-map-locate-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: #2563eb;
+    color: #2563eb;
+}
+
+.fleetbase-portal .portal-order-map-locate-btn.is-located {
+    border-color: #2563eb;
+    color: #2563eb;
+}
+
+.fleetbase-portal .portal-order-map-locate-btn:disabled {
+    cursor: wait;
+    opacity: 0.75;
+}
+
+body[data-theme='dark'].fleetbase-portal .portal-order-map-locate-btn {
+    border-color: #374151;
+    background: #111827;
+    color: #f8fafc;
+}
+
+body[data-theme='dark'].fleetbase-portal .portal-order-map-locate-btn.is-located,
+body[data-theme='dark'].fleetbase-portal .portal-order-map-locate-btn:hover:not(:disabled) {
+    border-color: #60a5fa;
+    color: #60a5fa;
+}
+
 .fleetbase-portal .portal-order-route-marker-icon {
     background: transparent;
     border: 0;

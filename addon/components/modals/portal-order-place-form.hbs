@@ -42,6 +42,10 @@
                 <ModelCoordinatesInput @model={{this.place}} @autocomplete="all" @onInputReady={{fn (mut this.coordinatesInput)}} />
             </InputGroup>
 
+            <div class="col-span-3 flex items-center">
+                <Button @icon="location-crosshairs" @text={{if this.isLocating "Locating..." "Use my current location"}} @size="xs" @disabled={{this.isLocating}} @onClick={{this.useCurrentLocation}} />
+            </div>
+
             <div class="col-span-3 space-y-2">
                 {{#each this.phones as |phone index|}}
                     <InputGroup @name={{if (eq index 0) "Phone (primary)" "Additional phone"}} @required={{eq index 0}} @helpText={{if (eq index 0) "At least one phone is required for pickup and dropoff."}}>

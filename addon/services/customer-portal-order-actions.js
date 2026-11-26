@@ -53,6 +53,10 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
         return Array.isArray(response?.places) ? response.places : [];
     }
 
+    reverseGeocode(latitude, longitude) {
+        return this.fetch.get('places/reverse', { latitude, longitude }, { namespace: NAMESPACE });
+    }
+
     @task *createPlace(place = {}) {
         return yield this.fetch.post('places', place, normalizeOptions('place'));
     }
