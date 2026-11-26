@@ -65,7 +65,17 @@ export default class PortalWalletComponent extends Component {
             originalAmount: this.money(payment.amount),
             amountChanged: (payment.paid_at || payment.status === 'paid' || payment.is_reversed) && payment.paid_amount !== payment.amount,
             methodLabel: this.intl.t(`customer-finances.${payment.method === 'bank_transfer' ? 'bank-transfer' : 'office-cash'}`),
+            isSent: payment.status === 'sent' && !payment.is_reversed,
+            statusLabel: payment.is_reversed ? this.intl.t('customer-finances.reversed') : this.intl.t(`customer-finances.status-${payment.status}`),
         }));
+    }
+
+    get awaitingConfirmationPayouts() {
+        return this.payouts.filter((payout) => payout.isSent);
+    }
+
+    get busy() {
+        return this.load.isRunning || this.confirmPayout.isRunning;
     }
 
     get firstOrderPage() {
@@ -95,6 +105,17 @@ export default class PortalWalletComponent extends Component {
         if (kind === 'orders') this.orderPage += offset;
         else this.paymentPage += offset;
         this.load.perform();
+    }
+
+    @dropTask *confirmPayout(payout) {
+        this.error = '';
+        try {
+            yield this.fetch.post(`wallet/payouts/${encodeURIComponent(payout.id)}/confirm`, {}, API);
+            this.notifications.success(this.intl.t('customer-finances.confirm-receipt-success'));
+            yield this.load.perform();
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     @dropTask *load() {

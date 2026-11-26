@@ -143,6 +143,17 @@ customer-finances:
   fees-help: These invoices document delivery fees already deducted from COD. Do not deduct them again.
   all-time: Summary and payment history cover all time; the period filter applies to order details only.
   invalid-period: Enter a valid period in YYYY-MM format.
+  awaiting-confirmation: Awaiting your confirmation
+  awaiting-confirmation-banner: '{count} payout(s) marked as sent by Colab Express are waiting for your receipt confirmation.'
+  review-and-confirm: Review & confirm in Transfers
+  confirm-receipt: Confirm I received this money
+  confirm-receipt-help: 'Step 2 of 2: Only confirm after you have actually received the funds. Confirming posts the transaction to your Ledger.'
+  confirm-receipt-success: Payout receipt confirmed and posted to the Ledger.
+  status-sent: Awaiting your confirmation
+  status-paid: Paid (Confirmed)
+  status-requested: Requested
+  status-approved: Approved
+  status-rejected: Rejected
   reversed: Reversed
   due: Due date
   balance: Invoice balance

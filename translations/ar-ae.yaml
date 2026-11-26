@@ -119,6 +119,17 @@ customer-finances:
   fees-help: هذه الفواتير توثق مصاريف سبق خصمها من المبالغ المقبوضة. لا تخصمها مرة ثانية.
   all-time: الملخص والتسويات يشملان كامل السجل. مرشح الفترة يطبق على تفاصيل الطلبات فقط.
   invalid-period: أدخل فترة صحيحة بصيغة سنة-شهر.
+  awaiting-confirmation: في انتظار تأكيدك
+  awaiting-confirmation-banner: '{count} دفعة مرسلة من Colab Express في انتظار تأكيد استلامك لها.'
+  review-and-confirm: مراجعة وتأكيد في الدفعات
+  confirm-receipt: أؤكد أنني استلمت هذا المبلغ
+  confirm-receipt-help: 'الخطوة 2 من 2: أكّد فقط بعد استلام الأموال فعلياً. يؤدي التأكيد إلى تسجيل القيد في دفتر الحسابات.'
+  confirm-receipt-success: تم تأكيد استلام الدفعة وتسجيلها في دفتر الحسابات.
+  status-sent: في انتظار تأكيدك
+  status-paid: مدفوع (مؤكد)
+  status-requested: مطلوب
+  status-approved: معتمد
+  status-rejected: مرفوض
   reversed: ملغى
   due: تاريخ الاستحقاق
   balance: رصيد الفاتورة

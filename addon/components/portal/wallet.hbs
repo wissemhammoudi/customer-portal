@@ -21,6 +21,15 @@
     </div>
     {{#if this.data}}
         {{#if (eq this.section "overview")}}
+            {{#if this.awaitingConfirmationPayouts.length}}
+                <div role="status" class="mt-4 rounded border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900" data-test-finance-pending-confirm-banner>
+                    <p class="font-semibold">{{t "customer-finances.awaiting-confirmation-banner" count=this.awaitingConfirmationPayouts.length}}</p>
+                    <p class="mt-1 text-xs">{{t "customer-finances.confirm-receipt-help"}}</p>
+                    <div class="mt-2">
+                        <Button @text={{t "customer-finances.review-and-confirm"}} @type="primary" @size="sm" @onClick={{fn this.selectSection "transfers"}} data-test-finance-review-sent />
+                    </div>
+                </div>
+            {{/if}}
             <h2>{{t "customer-finances.summary"}}</h2>
             <p>{{t "customer-finances.all-time"}}</p>
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-5">
@@ -64,8 +73,24 @@
                     <tbody>{{#each this.payouts as |payout|}}
                             <tr><td>{{or payout.paid_at payout.created_at}}</td><td>{{payout.formattedAmount}}{{#if payout.is_reversed}} ({{t "customer-finances.reversed"}}){{/if}}
                                     {{#if payout.amountChanged}}<p>{{t "customer-ux.original-amount"}}: {{payout.originalAmount}}</p>{{/if}}
-                                </td><td>{{payout.methodLabel}}</td><td>{{if payout.is_reversed (t "customer-finances.reversed") payout.status}}</td><td>{{payout.reference}}
-                                    {{payout.note}}</td><td><Portal::PayoutReceipt @payout={{payout}} @currency={{this.data.finance.currency}} @onSigned={{perform this.load}} /></td></tr>
+                                </td><td>{{payout.methodLabel}}</td><td>{{payout.statusLabel}}</td><td>{{payout.reference}}
+                                    {{payout.note}}</td><td>
+                                    {{#if payout.isSent}}
+                                        <div class="space-y-2">
+                                            <p class="text-xs text-amber-800">{{t "customer-finances.confirm-receipt-help"}}</p>
+                                            <Button
+                                                @text={{t "customer-finances.confirm-receipt"}}
+                                                @type="primary"
+                                                @size="sm"
+                                                @onClick={{perform this.confirmPayout payout}}
+                                                @disabled={{this.busy}}
+                                                data-test-finance-confirm-payout={{payout.id}}
+                                            />
+                                        </div>
+                                    {{else}}
+                                        <Portal::PayoutReceipt @payout={{payout}} @currency={{this.data.finance.currency}} @onSigned={{perform this.load}} />
+                                    {{/if}}
+                                </td></tr>
                         {{else}}<tr><td colspan="6">{{t "customer-finances.empty-payments"}}</td></tr>{{/each}}</tbody>
                 </table>
             </div>

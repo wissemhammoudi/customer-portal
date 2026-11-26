@@ -139,8 +139,19 @@ customer-finances:
   error: Impossible de charger les informations financieres. Actualisez avant de vous fier aux soldes.
   pending-help: Les especes encore chez le chauffeur ne sont pas disponibles pour reglement. Les paiements en attente restent reserves.
   fees-help: Ces factures justifient les frais deja deduits du COD. Ne les deduisez pas une seconde fois.
-  all-time: Les totaux et reglements couvrent tout l'historique ; le filtre de periode concerne uniquement les commandes.
+  all-time: Les totaux et reglements courent tout l'historique ; le filtre de periode concerne uniquement les commandes.
   invalid-period: Saisissez une periode valide au format AAAA-MM.
+  awaiting-confirmation: En attente de votre confirmation
+  awaiting-confirmation-banner: '{count} versement(s) envoyé(s) par Colab Express attendent votre confirmation de réception.'
+  review-and-confirm: Vérifier et confirmer dans Versements
+  confirm-receipt: Confirmer que j’ai reçu cet argent
+  confirm-receipt-help: 'Étape 2 sur 2 : Confirmez uniquement après avoir reçu les fonds. La confirmation enregistre la transaction dans votre Ledger.'
+  confirm-receipt-success: Réception du versement confirmée et enregistrée dans le Ledger.
+  status-sent: En attente de confirmation
+  status-paid: Payé (Confirmé)
+  status-requested: Demandé
+  status-approved: Approuvé
+  status-rejected: Rejeté
   reversed: Annule
   due: Echeance
   balance: Solde de la facture
