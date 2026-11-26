@@ -1,0 +1,84 @@
+<ContentPanel @title="Order messages" @open={{true}} @wrapperClass="bordered-top">
+    <div class="portal-order-chat">
+        {{#if (and this.loading (not this.chatData))}}
+            <div class="text-xs text-gray-500">Loading messages...</div>
+        {{else if (not this.isActive)}}
+            <div class="portal-order-chat-empty">
+                The message channel between driver, customer, and support opens automatically once pickup or delivery is underway.
+            </div>
+        {{else}}
+            <div class="portal-order-chat-header">
+                <div class="portal-order-chat-participants">
+                    {{#each this.participants as |person|}}
+                        <span class="portal-order-chat-pill role-{{person.role}}">
+                            {{person.name}} ({{if (eq person.role "driver") "Driver" (if (eq person.role "customer") "Customer" "Support")}})
+                        </span>
+                    {{/each}}
+                </div>
+                <Button @icon="arrows-rotate" @text="Refresh" @size="xs" @disabled={{this.loading}} @onClick={{fn this.loadChat false}} />
+            </div>
+
+            <div class="portal-order-chat-thread">
+                {{#each this.messages as |msg|}}
+                    <div class="portal-order-chat-msg {{if msg.sender.is_me 'is-mine'}}">
+                        <div class="portal-order-chat-meta">
+                            <strong>{{msg.sender.name}}</strong>
+                            <span class="portal-order-chat-role role-{{msg.sender.role}}">
+                                {{if (eq msg.sender.role "driver") "Driver" (if (eq msg.sender.role "customer") "Customer" "Support")}}
+                            </span>
+                            {{#if msg.created_at}}
+                                <span>{{format-date-fns msg.created_at "MMM d, HH:mm"}}</span>
+                            {{/if}}
+                        </div>
+                        {{#if msg.content}}
+                            <div class="portal-order-chat-text">{{msg.content}}</div>
+                        {{/if}}
+                        {{#if msg.attachments.length}}
+                            <div class="portal-order-chat-attachments">
+                                {{#each msg.attachments as |att|}}
+                                    <button type="button" class="portal-order-chat-thumb-btn" {{on "click" (fn this.openImage att.url)}}>
+                                        <img src={{att.url}} alt={{or att.filename "Chat photo"}} class="portal-order-chat-thumb" />
+                                    </button>
+                                {{/each}}
+                            </div>
+                        {{/if}}
+                    </div>
+                {{else}}
+                    <div class="portal-order-chat-empty">No messages yet. Write a message or share a photo with the driver or support.</div>
+                {{/each}}
+            </div>
+
+            <form class="portal-order-chat-composer" {{on "submit" this.sendMessage}}>
+                {{#if this.previewUrl}}
+                    <div class="portal-order-chat-preview">
+                        <img src={{this.previewUrl}} alt={{this.imageFilename}} />
+                        <span class="truncate text-xs">{{this.imageFilename}}</span>
+                        <button type="button" class="btn btn-default btn-xs" {{on "click" this.clearImage}}>Remove</button>
+                    </div>
+                {{/if}}
+                <textarea
+                    class="form-input w-full"
+                    rows="2"
+                    placeholder="Write a message..."
+                    value={{this.content}}
+                    disabled={{this.sending}}
+                    {{on "input" this.updateContent}}
+                ></textarea>
+                <div class="flex items-center justify-between gap-2">
+                    <label class="btn btn-default btn-xs cursor-pointer">
+                        <span>Attach image</span>
+                        <input type="file" accept="image/*" class="hidden" {{on "change" this.selectImage}} />
+                    </label>
+                    <Button @type="primary" @buttonType="submit" @icon="paper-plane" @text={{if this.sending "Sending..." "Send"}} @size="xs" @disabled={{not this.canSend}} />
+                </div>
+            </form>
+        {{/if}}
+    </div>
+
+    {{#if this.viewerUrl}}
+        <div class="portal-order-chat-lightbox" role="dialog" aria-modal="true">
+            <button type="button" class="btn btn-default btn-xs portal-order-chat-lightbox-close" {{on "click" this.closeViewer}}>Close</button>
+            <img src={{this.viewerUrl}} alt="Attachment preview" />
+        </div>
+    {{/if}}
+</ContentPanel>

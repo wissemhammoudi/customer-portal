@@ -109,6 +109,14 @@ export default class CustomerPortalOrderActionsService extends ResourceActionSer
         return response.handover;
     }
 
+    loadOrderChat(order) {
+        return this.fetch.get(`orders/${encodeURIComponent(this.identifier(order))}/chat`, {}, { namespace: NAMESPACE });
+    }
+
+    sendOrderChatMessage(order, payload = {}) {
+        return this.fetch.post(`orders/${encodeURIComponent(this.identifier(order))}/chat/messages`, payload, { namespace: NAMESPACE });
+    }
+
     identifier(order) {
         return order?.uuid ?? order?.public_id ?? order?.id;
     }
