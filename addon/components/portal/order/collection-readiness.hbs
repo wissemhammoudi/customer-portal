@@ -9,8 +9,8 @@
             <Portal::Order::CollectionHandover @order={{@order}} />
         {{/if}}
         {{#if this.plannedPickup}}<p>Planned pickup: {{this.plannedPickup}}</p>{{/if}}
-        {{#if this.workflow.planned_delivery_date}}
-            <p>Earliest planned delivery: {{this.workflow.planned_delivery_date}} ({{this.workflow.delivery_timezone}}). Not a guaranteed appointment.</p>
+        {{#if this.workflow.depot_received_at}}
+            <p>Received at depot: {{or this.workflow.depot_date this.workflow.depot_received_at}}.</p>
         {{/if}}
         {{#if this.editable}}<p>{{t "customer-ux.ready-question"}}</p>{{/if}}
         {{#if this.editable}}
